@@ -1,0 +1,191 @@
+{
+  "name": "Morning Batch - 프롬프트 생성",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger-morning",
+      "name": "Cron Trigger (AM 2:00)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, book_name, chapter, verse, korean_text, character_main, emotion_primary, fear_level, resolve_level, confusion_level FROM scripture WHERE status = 'pending' AND batch_status = 'pending' ORDER BY id ASC LIMIT 3"
+      },
+      "id": "sqlite-get-scripture",
+      "name": "SQLite: 구절 3개 불러오기",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-credentials",
+          "name": "SQLite DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Claude Batch API 요청 데이터 준비\nconst items = $input.all();\nconst batchItems = items.map(item => ({\n  json: {\n    custom_id: `scripture_${item.json.id}`,\n    params: {\n      model: \"claude-3-5-sonnet-20241022\",\n      max_tokens: 1000,\n      messages: [{\n        role: \"user\",\n        content: `성경 구절: ${item.json.korean_text}\\n캐릭터: ${item.json.character_main || '없음'}\\n감정: ${item.json.emotion_primary || '없음'}\\n\\n다음 JSON 형식으로 프롬프트를 생성하세요:\\n{\\n  \"visual_prompt\": \"Hedra/Runway용 시각적 프롬프트 (한국어, 감정과 상황 묘사)\",\\n  \"vocal_prompt\": \"Fish Audio용 음성 텍스트 (성경 본문 그대로)\",\\n  \"music_prompt\": \"Suno용 음악 프롬프트 (영어, 감정과 분위기)\",\\n  \"emotion_values\": {\\n    \"fear\": ${item.json.fear_level || 0.0},\\n    \"resolve\": ${item.json.resolve_level || 0.5},\\n    \"confusion\": ${item.json.confusion_level || 0.0}\\n  }\\n}\\n\\n주의: 해석이나 의미 부여 없이 현상만 묘사하세요.`\n      }\n    }\n  }\n}));\n\nreturn batchItems.map(item => ({ json: item.json }));"
+      },
+      "id": "prepare-batch-request",
+      "name": "Batch 요청 데이터 준비",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-3-5-sonnet-20241022"
+            },
+            {
+              "name": "max_tokens",
+              "value": "1000"
+            },
+            {
+              "name": "messages",
+              "value": "={{ $json.params.messages }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "claude-batch-request",
+      "name": "Claude: Batch 요청",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 300],
+      "credentials": {
+        "anthropicApi": {
+          "id": "claude-api-credentials",
+          "name": "Claude API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Claude 응답 파싱 및 SQLite 업데이트 데이터 준비\nconst items = $input.all();\nconst originalItems = $('SQLite: 구절 3개 불러오기').all();\n\nconst updateData = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const claudeResponse = items[i].json;\n  const original = originalItems[i].json;\n  \n  // Claude 응답에서 프롬프트 추출\n  let visualPrompt = '';\n  let vocalPrompt = '';\n  let musicPrompt = '';\n  let emotionValues = '{}';\n  \n  try {\n    const content = claudeResponse.content || [];\n    const text = content.find(c => c.type === 'text')?.text || '';\n    \n    // JSON 파싱 시도\n    const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      visualPrompt = parsed.visual_prompt || '';\n      vocalPrompt = parsed.vocal_prompt || original.korean_text;\n      musicPrompt = parsed.music_prompt || '';\n      emotionValues = JSON.stringify(parsed.emotion_values || {});\n    }\n  } catch (e) {\n    console.error('JSON 파싱 실패:', e);\n    vocalPrompt = original.korean_text;\n  }\n  \n  updateData.push({\n    json: {\n      id: original.id,\n      visual_prompt: visualPrompt,\n      vocal_prompt: vocalPrompt,\n      music_prompt: musicPrompt,\n      emotion_values: emotionValues,\n      batch_status: 'completed',\n      batch_request_date: new Date().toISOString()\n    }\n  });\n}\n\nreturn updateData;"
+      },
+      "id": "parse-claude-response",
+      "name": "Claude 응답 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE scripture SET visual_prompt = $1, vocal_prompt = $2, music_prompt = $3, emotion_values = $4, batch_status = $5, batch_request_date = $6 WHERE id = $7",
+        "additionalFields": {
+          "queryParameters": "={{ [$json.visual_prompt, $json.vocal_prompt, $json.music_prompt, $json.emotion_values, $json.batch_status, $json.batch_request_date, $json.id] }}"
+        }
+      },
+      "id": "sqlite-update-batch",
+      "name": "SQLite: Batch 상태 업데이트",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-credentials",
+          "name": "SQLite DB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron Trigger (AM 2:00)": {
+      "main": [
+        [
+          {
+            "node": "SQLite: 구절 3개 불러오기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQLite: 구절 3개 불러오기": {
+      "main": [
+        [
+          {
+            "node": "Batch 요청 데이터 준비",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch 요청 데이터 준비": {
+      "main": [
+        [
+          {
+            "node": "Claude: Batch 요청",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Batch 요청": {
+      "main": [
+        [
+          {
+            "node": "Claude 응답 파싱",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude 응답 파싱": {
+      "main": [
+        [
+          {
+            "node": "SQLite: Batch 상태 업데이트",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-01-23T00:00:00.000Z",
+  "versionId": "1"
+}
