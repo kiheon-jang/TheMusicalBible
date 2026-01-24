@@ -21,10 +21,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, book_name, chapter, verse, korean_text, character_main, emotion_primary, fear_level, resolve_level, confusion_level FROM scripture WHERE status = 'pending' ORDER BY id ASC LIMIT 3"
+        "query": "SELECT s.id, s.book_name, s.chapter, s.verse, s.korean_text, s.character_main, s.emotion_primary, s.fear_level, s.resolve_level, s.confusion_level FROM scripture s JOIN book_order b ON s.book_name = b.book_name_korean WHERE s.status = 'pending' ORDER BY b.book_number, s.chapter, s.verse LIMIT 3"
       },
       "id": "postgres-get-scripture",
-      "name": "PostgreSQL: 구절 3개 조회",
+      "name": "PostgreSQL: 구절 3개 조회 (순차)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [450, 500],
