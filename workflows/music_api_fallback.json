@@ -1,0 +1,403 @@
+{
+  "name": "Music API with Fallback (Suno → Udio → Mubert)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "시작",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://suno-api-production-ac35.up.railway.app/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.music_prompt }}"
+            },
+            {
+              "name": "make_instrumental",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "try-suno",
+      "name": "1. Suno 시도",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-suno-success",
+      "name": "Suno 성공?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "api_used",
+              "value": "suno"
+            },
+            {
+              "name": "audio_url",
+              "value": "={{ $json[0].audio_url }}"
+            }
+          ]
+        }
+      },
+      "id": "suno-success",
+      "name": "Suno 성공",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://your-udio-api.railway.app/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.music_prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "try-udio",
+      "name": "2. Udio 시도",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-udio-success",
+      "name": "Udio 성공?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "api_used",
+              "value": "udio"
+            },
+            {
+              "name": "audio_url",
+              "value": "={{ $json.audio_url }}"
+            }
+          ]
+        }
+      },
+      "id": "udio-success",
+      "name": "Udio 성공",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api-b2b.mubert.com/v2/RecordTrack",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "mubertApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"mode\": \"track\",\n  \"duration\": 30,\n  \"tags\": \"{{ $json.music_style || 'cinematic,orchestral' }}\"\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "try-mubert",
+      "name": "3. Mubert 시도",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "api_used",
+              "value": "mubert"
+            },
+            {
+              "name": "audio_url",
+              "value": "={{ $json.data.tasks[0].download_link }}"
+            }
+          ]
+        }
+      },
+      "id": "mubert-success",
+      "name": "Mubert 성공",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 모든 API 실패 시 백업 음원 라이브러리에서 랜덤 선택\nconst backupMusicIds = [\n  '1abc-def-ghi',\n  '2jkl-mno-pqr',\n  '3stu-vwx-yz',\n  // Google Drive 파일 IDs\n];\n\nconst randomId = backupMusicIds[Math.floor(Math.random() * backupMusicIds.length)];\n\nreturn {\n  api_used: 'backup_library',\n  google_drive_file_id: randomId,\n  fallback: true\n};"
+      },
+      "id": "use-backup",
+      "name": "4. 백업 음원 라이브러리",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 600]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.google_drive_file_id }}"
+      },
+      "id": "download-backup",
+      "name": "백업 음원 다운로드",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [1650, 600]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.audio_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-audio",
+      "name": "음원 다운로드",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1650, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO api_usage_log (api_name, request_type, response_status, cost_usd, created_at) VALUES ('={{ $json.api_used }}', 'music_generation', 200, 0, NOW())"
+      },
+      "id": "log-api-usage",
+      "name": "API 사용 로그",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1850, 500]
+    }
+  ],
+  "connections": {
+    "시작": {
+      "main": [
+        [
+          {
+            "node": "1. Suno 시도",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Suno 시도": {
+      "main": [
+        [
+          {
+            "node": "Suno 성공?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno 성공?": {
+      "main": [
+        [
+          {
+            "node": "Suno 성공",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "2. Udio 시도",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno 성공": {
+      "main": [
+        [
+          {
+            "node": "음원 다운로드",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Udio 시도": {
+      "main": [
+        [
+          {
+            "node": "Udio 성공?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Udio 성공?": {
+      "main": [
+        [
+          {
+            "node": "Udio 성공",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "3. Mubert 시도",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Udio 성공": {
+      "main": [
+        [
+          {
+            "node": "음원 다운로드",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Mubert 시도": {
+      "main": [
+        [
+          {
+            "node": "Mubert 성공",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "4. 백업 음원 라이브러리",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mubert 성공": {
+      "main": [
+        [
+          {
+            "node": "음원 다운로드",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. 백업 음원 라이브러리": {
+      "main": [
+        [
+          {
+            "node": "백업 음원 다운로드",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "음원 다운로드": {
+      "main": [
+        [
+          {
+            "node": "API 사용 로그",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "백업 음원 다운로드": {
+      "main": [
+        [
+          {
+            "node": "API 사용 로그",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

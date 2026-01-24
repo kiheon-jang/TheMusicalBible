@@ -1,0 +1,212 @@
+{
+  "name": "Daily Monitoring - YouTube 통계 수집",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger-monitoring",
+      "name": "Cron Trigger (AM 10:00)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, youtube_video_id, youtube_url FROM scripture WHERE youtube_video_id IS NOT NULL AND status = 'completed'"
+      },
+      "id": "sqlite-get-youtube-videos",
+      "name": "SQLite: YouTube 영상 목록",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "resource": "analytics",
+        "operation": "getReport",
+        "startDate": "={{ $now.minus({ days: 1 }).toFormat('yyyy-MM-dd') }}",
+        "endDate": "={{ $now.toFormat('yyyy-MM-dd') }}",
+        "metrics": "views,estimatedMinutesWatched,likes,comments,shares,subscribersGained",
+        "dimensions": "video",
+        "filters": "video=={{ $json.youtube_video_id }}"
+      },
+      "id": "youtube-analytics",
+      "name": "YouTube Analytics API",
+      "type": "n8n-nodes-base.youtube",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "// YouTube Analytics 데이터를 SQLite 형식으로 변환\nconst items = $input.all();\nconst original = $('SQLite: YouTube 영상 목록').all();\n\nconst analyticsData = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const analytics = items[i].json;\n  const video = original.find(o => o.json.youtube_video_id === analytics.videoId);\n  \n  if (video) {\n    analyticsData.push({\n      json: {\n        scripture_id: video.json.id,\n        date: $now.toFormat('yyyy-MM-dd'),\n        views: analytics.views || 0,\n        watch_time_hours: (analytics.estimatedMinutesWatched || 0) / 60,\n        revenue: analytics.estimatedRevenue || 0,\n        likes: analytics.likes || 0,\n        comments: analytics.comments || 0,\n        shares: analytics.shares || 0,\n        subscribers_gained: analytics.subscribersGained || 0\n      }\n    });\n  }\n}\n\nreturn analyticsData;"
+      },
+      "id": "format-analytics",
+      "name": "Analytics 데이터 포맷팅",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT OR REPLACE INTO youtube_analytics (scripture_id, date, views, watch_time_hours, revenue, likes, comments, shares, subscribers_gained) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        "additionalFields": {
+          "queryParameters": "={{ [$json.scripture_id, $json.date, $json.views, $json.watch_time_hours, $json.revenue, $json.likes, $json.comments, $json.shares, $json.subscribers_gained] }}"
+        }
+      },
+      "id": "sqlite-update-analytics",
+      "name": "SQLite: Analytics 저장",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        300
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE scripture SET youtube_views = (SELECT SUM(views) FROM youtube_analytics WHERE scripture_id = scripture.id), youtube_watch_time_hours = (SELECT SUM(watch_time_hours) FROM youtube_analytics WHERE scripture_id = scripture.id), youtube_revenue = (SELECT SUM(revenue) FROM youtube_analytics WHERE scripture_id = scripture.id), youtube_likes = (SELECT SUM(likes) FROM youtube_analytics WHERE scripture_id = scripture.id), youtube_comments = (SELECT SUM(comments) FROM youtube_analytics WHERE scripture_id = scripture.id) WHERE id IN (SELECT DISTINCT scripture_id FROM youtube_analytics WHERE date = $1)",
+        "additionalFields": {
+          "queryParameters": "={{ [$now.toFormat('yyyy-MM-dd')] }}"
+        }
+      },
+      "id": "sqlite-update-stats",
+      "name": "SQLite: 통계 업데이트",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "={{ $env.GOOGLE_SHEETS_DOCUMENT_ID }}",
+        "sheetName": "YouTube Analytics",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "날짜": "={{ $json.date }}",
+            "에피소드 ID": "={{ $json.scripture_id }}",
+            "조회수": "={{ $json.views }}",
+            "시청 시간 (시간)": "={{ $json.watch_time_hours }}",
+            "예상 수익": "={{ $json.revenue }}",
+            "좋아요": "={{ $json.likes }}",
+            "댓글": "={{ $json.comments }}",
+            "공유": "={{ $json.shares }}",
+            "구독자 증가": "={{ $json.subscribers_gained }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "google-sheets-log",
+      "name": "Google Sheets: 통계 기록",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1450,
+        300
+      ],
+      "credentials": {}
+    }
+  ],
+  "connections": {
+    "Cron Trigger (AM 10:00)": {
+      "main": [
+        [
+          {
+            "node": "SQLite: YouTube 영상 목록",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQLite: YouTube 영상 목록": {
+      "main": [
+        [
+          {
+            "node": "YouTube Analytics API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Analytics API": {
+      "main": [
+        [
+          {
+            "node": "Analytics 데이터 포맷팅",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analytics 데이터 포맷팅": {
+      "main": [
+        [
+          {
+            "node": "SQLite: Analytics 저장",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQLite: Analytics 저장": {
+      "main": [
+        [
+          {
+            "node": "SQLite: 통계 업데이트",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQLite: 통계 업데이트": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets: 통계 기록",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

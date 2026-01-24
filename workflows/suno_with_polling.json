@@ -1,0 +1,349 @@
+{
+  "name": "Suno 음악 생성 (Polling)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "시작",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://suno-api-production-ac35.up.railway.app/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.music_prompt }}"
+            },
+            {
+              "name": "make_instrumental",
+              "value": "true"
+            },
+            {
+              "name": "wait_audio",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "start-generation",
+      "name": "Suno 생성 시작",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "taskId",
+              "value": "={{ $json[0].id }}"
+            },
+            {
+              "name": "pollCount",
+              "value": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-task-id",
+      "name": "Task ID 추출",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "wait-10s",
+      "name": "10초 대기",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://suno-api-production-ac35.up.railway.app/api/get/={{ $json.taskId }}",
+        "options": {}
+      },
+      "id": "poll-status",
+      "name": "상태 확인",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json[0].status }}",
+              "rightValue": "complete",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-complete",
+      "name": "완료 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json[0].audio_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-audio",
+      "name": "음원 다운로드",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.pollCount }}",
+              "rightValue": "30",
+              "operator": {
+                "type": "number",
+                "operation": "smaller"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-timeout",
+      "name": "타임아웃 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "number": [
+            {
+              "name": "pollCount",
+              "value": "={{ $json.pollCount + 1 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "increment-count",
+      "name": "카운트 증가",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1650, 400]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "wait-again",
+      "name": "재시도 대기",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1850, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop back to poll again\nreturn $input.all();"
+      },
+      "id": "loop-back",
+      "name": "다시 체크",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2050, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "error",
+              "value": "Suno generation timeout after 5 minutes (30 polls)"
+            },
+            {
+              "name": "fallback_needed",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "id": "timeout-error",
+      "name": "타임아웃 에러",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1650, 600]
+    }
+  ],
+  "connections": {
+    "시작": {
+      "main": [
+        [
+          {
+            "node": "Suno 생성 시작",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno 생성 시작": {
+      "main": [
+        [
+          {
+            "node": "Task ID 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Task ID 추출": {
+      "main": [
+        [
+          {
+            "node": "10초 대기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10초 대기": {
+      "main": [
+        [
+          {
+            "node": "상태 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "상태 확인": {
+      "main": [
+        [
+          {
+            "node": "완료 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "완료 체크": {
+      "main": [
+        [
+          {
+            "node": "음원 다운로드",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "타임아웃 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "타임아웃 체크": {
+      "main": [
+        [
+          {
+            "node": "카운트 증가",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "타임아웃 에러",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "카운트 증가": {
+      "main": [
+        [
+          {
+            "node": "재시도 대기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "재시도 대기": {
+      "main": [
+        [
+          {
+            "node": "다시 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "다시 체크": {
+      "main": [
+        [
+          {
+            "node": "상태 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
