@@ -1,0 +1,183 @@
+{
+  "name": "Complete Pipeline - 스토리 단위 (Story-Based)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron Trigger (AM 3:00)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.id, s.book_name, s.verses_range, s.title, s.verse_count, s.key_theme, s.main_characters, s.story_arc, s.estimated_duration_sec FROM story_units s JOIN book_order b ON s.book_name = b.book_name_korean WHERE s.status = 'pending' ORDER BY b.book_number, s.id LIMIT 3"
+      },
+      "id": "postgres-get-stories",
+      "name": "PostgreSQL: 스토리 3개 조회 (순차)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [450, 500],
+      "credentials": {
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 각 스토리를 개별 아이템으로 분리\nconst items = $input.all();\nreturn items.map(item => ({ json: item.json }));"
+      },
+      "id": "split-items",
+      "name": "스토리별 분리",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-3-5-sonnet-20241022"
+            },
+            {
+              "name": "max_tokens",
+              "value": "2000"
+            },
+            {
+              "name": "messages",
+              "value": "={{ [{ \"role\": \"user\", \"content\": \"당신은 시네마틱 뮤지컬 성경 영상 전문가입니다.\\n\\n## 입력 스토리:\\n- 제목: \" + $json.title + \"\\n- 구절 범위: \" + $json.book_name + \" \" + $json.verses_range + \"\\n- 핵심 주제: \" + $json.key_theme + \"\\n- 등장인물: \" + JSON.stringify($json.main_characters) + \"\\n- 스토리 구조: \" + $json.story_arc + \"\\n- 예상 길이: \" + $json.estimated_duration_sec + \"초\\n\\n## 과제:\\n이 스토리를 60-180초 뮤지컬 영상으로 제작하기 위한 프롬프트를 생성하세요.\\n\\n## 3단계 시네마틱 구조:\\n\\n### Act 1: 도입 (0-30초)\\n- 배경 설정, 인물 소개\\n- Runway 배경 영상\\n- 조용한 instrumental\\n\\n### Act 2: 전개/갈등 (30-90초)\\n- 스토리 중심부\\n- Hedra 캐릭터 연기\\n- 음악 빌드업\\n\\n### Act 3: 절정/결말 (90-180초)\\n- 뮤지컬 가창\\n- 립싱크 클로즈업\\n- 드라마틱 마무리\\n\\n## 중요 원칙:\\n1. 해석 금지: 기록된 현상만 묘사\\n2. 중립성: 신학적 논쟁 배제\\n3. 1인칭 시점: 인물의 눈으로\\n4. 완결된 서사: 시작-전개-절정-결말\\n\\n## 출력 형식 (JSON):\\n```json\\n{\\n  \\\"narrative_structure\\\": {\\n    \\\"act1_setup\\\": \\\"도입부 요약 (30초)\\\",\\n    \\\"act2_conflict\\\": \\\"갈등/전개 (60초)\\\",\\n    \\\"act3_resolution\\\": \\\"절정/해결 (90초)\\\"\\n  },\\n  \\\"phase1_background\\\": {\\n    \\\"location\\\": \\\"장소 영문\\\",\\n    \\\"time_of_day\\\": \\\"시간대\\\",\\n    \\\"runway_prompt\\\": \\\"Runway용 완전한 영문 프롬프트 (30초 배경)\\\"\\n  },\\n  \\\"phase2_characters\\\": [\\n    {\\n      \\\"character\\\": \\\"캐릭터명\\\",\\n      \\\"timing\\\": \\\"10-40초\\\",\\n      \\\"description\\\": \\\"외형 영문 (나이, 복장 등)\\\",\\n      \\\"emotion\\\": \\\"감정 상태\\\",\\n      \\\"hedra_prompt\\\": \\\"Hedra용 완전한 영문 프롬프트\\\"\\n    }\\n  ],\\n  \\\"phase3_aria\\\": {\\n    \\\"vocal_lyrics\\\": \\\"뮤지컬 가사 (한국어, 스토리 전체 요약, 10-15줄)\\\",\\n    \\\"vocal_emotion_tags\\\": \\\"Fish Audio 감정 태그\\\",\\n    \\\"music_style\\\": \\\"음악 스타일\\\",\\n    \\\"suno_prompt\\\": \\\"Suno용 음악 프롬프트 (영문)\\\"\\n  },\\n  \\\"emotion_values\\\": {\\n    \\\"fear\\\": 0.0,\\n    \\\"resolve\\\": 0.5,\\n    \\\"confusion\\\": 0.0\\n  }\\n}\\n```\\n\\n지금 이 스토리를 위한 완전한 프롬프트를 생성하세요.\" }] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "claude-story-prompts",
+      "name": "Claude: 스토리 프롬프트 생성",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 500],
+      "credentials": {
+        "anthropicApi": {
+          "id": "claude-api-credentials",
+          "name": "Claude API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Claude 스토리 응답 파싱\nconst original = $input.first().json;\nconst claudeResponse = $input.last().json;\n\nlet narrative = {};\nlet phase1 = {};\nlet phase2 = [];\nlet phase3 = {};\nlet emotionValues = { fear: 0.0, resolve: 0.5, confusion: 0.0 };\n\ntry {\n  const content = claudeResponse.content || [];\n  const text = content.find(c => c.type === 'text')?.text || '';\n  \n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    narrative = parsed.narrative_structure || {};\n    phase1 = parsed.phase1_background || {};\n    phase2 = parsed.phase2_characters || [];\n    phase3 = parsed.phase3_aria || {};\n    emotionValues = parsed.emotion_values || emotionValues;\n  }\n} catch (e) {\n  console.error('JSON 파싱 실패:', e);\n  // 폴백\n  phase1 = {\n    runway_prompt: `Wide cinematic shot of ${original.title}, biblical scene`\n  };\n  phase2 = [{\n    character: original.main_characters?.[0] || 'biblical character',\n    hedra_prompt: `Biblical scene with ${original.main_characters?.[0] || 'character'}`\n  }];\n  phase3 = {\n    vocal_lyrics: `${original.title}\\n${original.key_theme}`,\n    suno_prompt: 'Cinematic orchestral epic dramatic'\n  };\n}\n\n// Fish Audio 감정 태그\nlet fishTags = [];\nif (emotionValues.fear > 0.7) fishTags.push('scared', 'nervous');\nelse if (emotionValues.fear > 0.4) fishTags.push('worried');\nif (emotionValues.confusion > 0.6) fishTags.push('confused');\nif (emotionValues.resolve > 0.8) fishTags.push('confident', 'determined');\nif (fishTags.length === 0) fishTags.push('calm');\n\nconst phase3Tags = phase3.vocal_emotion_tags || '';\nif (phase3Tags) fishTags.push(phase3Tags);\nconst fishEmotionString = `(${fishTags.join(')(')})` ;\n\n// 주요 캐릭터 선택 (첫 번째)\nconst mainChar = phase2[0] || {};\n\nreturn [{\n  json: {\n    story_id: original.id,\n    book_name: original.book_name,\n    verses_range: original.verses_range,\n    title: original.title,\n    verse_count: original.verse_count,\n    estimated_duration_sec: original.estimated_duration_sec,\n    \n    // 서사 구조\n    narrative_structure: JSON.stringify(narrative),\n    \n    // Phase 1\n    phase1_location: phase1.location || '',\n    phase1_runway_prompt: phase1.runway_prompt || '',\n    phase1_duration: Math.ceil(original.estimated_duration_sec * 0.25),\n    \n    // Phase 2\n    phase2_character_description: mainChar.description || '',\n    phase2_hedra_prompt: mainChar.hedra_prompt || '',\n    phase2_duration: Math.ceil(original.estimated_duration_sec * 0.35),\n    \n    // Phase 3\n    phase3_vocal_lyrics: phase3.vocal_lyrics || '',\n    phase3_suno_prompt: phase3.suno_prompt || '',\n    phase3_duration: Math.ceil(original.estimated_duration_sec * 0.4),\n    \n    // 통합\n    visual_prompt: phase1.runway_prompt || '',\n    vocal_prompt: phase3.vocal_lyrics || '',\n    music_prompt: phase3.suno_prompt || '',\n    fish_emotion_tags: fishEmotionString,\n    emotion_values: JSON.stringify(emotionValues)\n  }\n}];"
+      },
+      "id": "parse-story-response",
+      "name": "스토리 프롬프트 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE story_units SET narrative_structure = $1, phase1_location = $2, phase1_runway_prompt = $3, phase2_character_description = $4, phase2_hedra_prompt = $5, phase3_vocal_lyrics = $6, phase3_suno_prompt = $7, visual_prompt = $8, vocal_prompt = $9, music_prompt = $10, fish_emotion_tags = $11, emotion_values = $12 WHERE id = $13",
+        "additionalFields": {
+          "queryParameters": "={{ [$json.narrative_structure, $json.phase1_location, $json.phase1_runway_prompt, $json.phase2_character_description, $json.phase2_hedra_prompt, $json.phase3_vocal_lyrics, $json.phase3_suno_prompt, $json.visual_prompt, $json.vocal_prompt, $json.music_prompt, $json.fish_emotion_tags, $json.emotion_values, $json.story_id] }}"
+        }
+      },
+      "id": "postgres-update-story",
+      "name": "PostgreSQL: 스토리 프롬프트 저장",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1250, 500],
+      "credentials": {
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "always-true",
+              "leftValue": "={{ $json.story_id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "split-parallel",
+      "name": "병렬 분기 (4개 API)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 500]
+    }
+  ],
+  "connections": {
+    "Cron Trigger (AM 3:00)": {
+      "main": [[{"node": "PostgreSQL: 스토리 3개 조회 (순차)", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL: 스토리 3개 조회 (순차)": {
+      "main": [[{"node": "스토리별 분리", "type": "main", "index": 0}]]
+    },
+    "스토리별 분리": {
+      "main": [[{"node": "Claude: 스토리 프롬프트 생성", "type": "main", "index": 0}]]
+    },
+    "Claude: 스토리 프롬프트 생성": {
+      "main": [[{"node": "스토리 프롬프트 파싱", "type": "main", "index": 0}]]
+    },
+    "스토리 프롬프트 파싱": {
+      "main": [[{"node": "PostgreSQL: 스토리 프롬프트 저장", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL: 스토리 프롬프트 저장": {
+      "main": [[{"node": "병렬 분기 (4개 API)", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-01-25T00:00:00.000Z",
+  "versionId": "1"
+}
