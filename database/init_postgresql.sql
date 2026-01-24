@@ -30,6 +30,31 @@ CREATE TABLE IF NOT EXISTS scripture (
   music_prompt TEXT,
   emotion_values TEXT,  -- JSON 형식
   
+  -- 3단계 시네마틱 구조 (Phase 1, 2, 3)
+  phase1_shot_type VARCHAR(50),        -- 'wide', 'close-up', 'overhead'
+  phase1_location VARCHAR(255),        -- 장소 (예: 'ancient desert')
+  phase1_runway_prompt TEXT,           -- Runway 프롬프트
+  phase1_duration INTEGER DEFAULT 8,   -- Phase 1 길이 (초)
+  
+  phase2_character_state TEXT,         -- 캐릭터 감정 상태
+  phase2_hedra_prompt TEXT,            -- Hedra 표정 프롬프트
+  phase2_duration INTEGER DEFAULT 10,  -- Phase 2 길이 (초)
+  
+  phase3_vocal_lyrics TEXT,            -- 뮤지컬 가사
+  phase3_suno_prompt TEXT,             -- Suno 음악 프롬프트
+  phase3_visual_climax TEXT,           -- 절정 시각 효과
+  phase3_duration INTEGER DEFAULT 12,  -- Phase 3 길이 (초)
+  
+  -- 캐릭터 관리
+  character_image VARCHAR(255),        -- 캐릭터 이미지 파일명 (나이 버전 포함)
+  character_age_stage VARCHAR(20),     -- 'young', 'middle', 'old'
+  fish_emotion_tags VARCHAR(255),      -- Fish Audio 감정 태그 문자열
+  
+  -- 장소/환경 연속성
+  runway_seed VARCHAR(255),            -- Runway Seed (장소 일관성)
+  camera_angle VARCHAR(50),            -- 카메라 앵글
+  color_palette VARCHAR(255),          -- 컬러 팔레트
+  
   -- Batch 처리 상태
   batch_request_id VARCHAR(255),
   batch_status VARCHAR(50) DEFAULT 'pending',
