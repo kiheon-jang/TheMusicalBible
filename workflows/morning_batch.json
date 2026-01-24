@@ -23,15 +23,15 @@
         "operation": "executeQuery",
         "query": "SELECT id, book_name, chapter, verse, korean_text, character_main, emotion_primary, fear_level, resolve_level, confusion_level FROM scripture WHERE status = 'pending' AND batch_status = 'pending' ORDER BY id ASC LIMIT 3"
       },
-      "id": "sqlite-get-scripture",
-      "name": "SQLite: 구절 3개 불러오기",
-      "type": "n8n-nodes-base.sqlite",
+      "id": "postgres-get-scripture",
+      "name": "PostgreSQL: 구절 3개 불러오기",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [450, 300],
       "credentials": {
-        "sqlite": {
-          "id": "sqlite-credentials",
-          "name": "SQLite DB"
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
         }
       }
     },
@@ -93,7 +93,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Claude 응답 파싱 및 SQLite 업데이트 데이터 준비\nconst items = $input.all();\nconst originalItems = $('SQLite: 구절 3개 불러오기').all();\n\nconst updateData = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const claudeResponse = items[i].json;\n  const original = originalItems[i].json;\n  \n  // Claude 응답에서 프롬프트 추출\n  let visualPrompt = '';\n  let vocalPrompt = '';\n  let musicPrompt = '';\n  let emotionValues = '{}';\n  \n  try {\n    const content = claudeResponse.content || [];\n    const text = content.find(c => c.type === 'text')?.text || '';\n    \n    // JSON 파싱 시도\n    const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      visualPrompt = parsed.visual_prompt || '';\n      vocalPrompt = parsed.vocal_prompt || original.korean_text;\n      musicPrompt = parsed.music_prompt || '';\n      emotionValues = JSON.stringify(parsed.emotion_values || {});\n    }\n  } catch (e) {\n    console.error('JSON 파싱 실패:', e);\n    vocalPrompt = original.korean_text;\n  }\n  \n  updateData.push({\n    json: {\n      id: original.id,\n      visual_prompt: visualPrompt,\n      vocal_prompt: vocalPrompt,\n      music_prompt: musicPrompt,\n      emotion_values: emotionValues,\n      batch_status: 'completed',\n      batch_request_date: new Date().toISOString()\n    }\n  });\n}\n\nreturn updateData;"
+        "jsCode": "// Claude 응답 파싱 및 SQLite 업데이트 데이터 준비\nconst items = $input.all();\nconst originalItems = $('PostgreSQL: 구절 3개 불러오기').all();\n\nconst updateData = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const claudeResponse = items[i].json;\n  const original = originalItems[i].json;\n  \n  // Claude 응답에서 프롬프트 추출\n  let visualPrompt = '';\n  let vocalPrompt = '';\n  let musicPrompt = '';\n  let emotionValues = '{}';\n  \n  try {\n    const content = claudeResponse.content || [];\n    const text = content.find(c => c.type === 'text')?.text || '';\n    \n    // JSON 파싱 시도\n    const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      visualPrompt = parsed.visual_prompt || '';\n      vocalPrompt = parsed.vocal_prompt || original.korean_text;\n      musicPrompt = parsed.music_prompt || '';\n      emotionValues = JSON.stringify(parsed.emotion_values || {});\n    }\n  } catch (e) {\n    console.error('JSON 파싱 실패:', e);\n    vocalPrompt = original.korean_text;\n  }\n  \n  updateData.push({\n    json: {\n      id: original.id,\n      visual_prompt: visualPrompt,\n      vocal_prompt: vocalPrompt,\n      music_prompt: musicPrompt,\n      emotion_values: emotionValues,\n      batch_status: 'completed',\n      batch_request_date: new Date().toISOString()\n    }\n  });\n}\n\nreturn updateData;"
       },
       "id": "parse-claude-response",
       "name": "Claude 응답 파싱",
@@ -109,15 +109,15 @@
           "queryParameters": "={{ [$json.visual_prompt, $json.vocal_prompt, $json.music_prompt, $json.emotion_values, $json.batch_status, $json.batch_request_date, $json.id] }}"
         }
       },
-      "id": "sqlite-update-batch",
-      "name": "SQLite: Batch 상태 업데이트",
-      "type": "n8n-nodes-base.sqlite",
+      "id": "postgres-update-batch",
+      "name": "PostgreSQL: Batch 상태 업데이트",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [1250, 300],
       "credentials": {
-        "sqlite": {
-          "id": "sqlite-credentials",
-          "name": "SQLite DB"
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
         }
       }
     }
@@ -127,14 +127,14 @@
       "main": [
         [
           {
-            "node": "SQLite: 구절 3개 불러오기",
+            "node": "PostgreSQL: 구절 3개 불러오기",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SQLite: 구절 3개 불러오기": {
+    "PostgreSQL: 구절 3개 불러오기": {
       "main": [
         [
           {
@@ -171,7 +171,7 @@
       "main": [
         [
           {
-            "node": "SQLite: Batch 상태 업데이트",
+            "node": "PostgreSQL: Batch 상태 업데이트",
             "type": "main",
             "index": 0
           }

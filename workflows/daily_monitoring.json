@@ -23,15 +23,15 @@
         "operation": "executeQuery",
         "query": "SELECT id, youtube_video_id, youtube_url FROM scripture WHERE youtube_video_id IS NOT NULL AND status = 'completed'"
       },
-      "id": "sqlite-get-youtube-videos",
-      "name": "SQLite: YouTube 영상 목록",
-      "type": "n8n-nodes-base.sqlite",
+      "id": "postgres-get-youtube-videos",
+      "name": "PostgreSQL: YouTube 영상 목록",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [450, 300],
       "credentials": {
-        "sqlite": {
-          "id": "sqlite-credentials",
-          "name": "SQLite DB"
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
         }
       }
     },
@@ -59,7 +59,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// YouTube Analytics 데이터를 SQLite 형식으로 변환\nconst items = $input.all();\nconst original = $('SQLite: YouTube 영상 목록').all();\n\nconst analyticsData = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const analytics = items[i].json;\n  const video = original.find(o => o.json.youtube_video_id === analytics.videoId);\n  \n  if (video) {\n    analyticsData.push({\n      json: {\n        scripture_id: video.json.id,\n        date: $now.toFormat('yyyy-MM-dd'),\n        views: analytics.views || 0,\n        watch_time_hours: (analytics.estimatedMinutesWatched || 0) / 60,\n        revenue: analytics.estimatedRevenue || 0,\n        likes: analytics.likes || 0,\n        comments: analytics.comments || 0,\n        shares: analytics.shares || 0,\n        subscribers_gained: analytics.subscribersGained || 0\n      }\n    });\n  }\n}\n\nreturn analyticsData;"
+        "jsCode": "// YouTube Analytics 데이터를 SQLite 형식으로 변환\nconst items = $input.all();\nconst original = $('PostgreSQL: YouTube 영상 목록').all();\n\nconst analyticsData = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const analytics = items[i].json;\n  const video = original.find(o => o.json.youtube_video_id === analytics.videoId);\n  \n  if (video) {\n    analyticsData.push({\n      json: {\n        scripture_id: video.json.id,\n        date: $now.toFormat('yyyy-MM-dd'),\n        views: analytics.views || 0,\n        watch_time_hours: (analytics.estimatedMinutesWatched || 0) / 60,\n        revenue: analytics.estimatedRevenue || 0,\n        likes: analytics.likes || 0,\n        comments: analytics.comments || 0,\n        shares: analytics.shares || 0,\n        subscribers_gained: analytics.subscribersGained || 0\n      }\n    });\n  }\n}\n\nreturn analyticsData;"
       },
       "id": "format-analytics",
       "name": "Analytics 데이터 포맷팅",
@@ -75,15 +75,15 @@
           "queryParameters": "={{ [$json.scripture_id, $json.date, $json.views, $json.watch_time_hours, $json.revenue, $json.likes, $json.comments, $json.shares, $json.subscribers_gained] }}"
         }
       },
-      "id": "sqlite-update-analytics",
-      "name": "SQLite: Analytics 저장",
-      "type": "n8n-nodes-base.sqlite",
+      "id": "postgres-update-analytics",
+      "name": "PostgreSQL: Analytics 저장",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [1050, 300],
       "credentials": {
-        "sqlite": {
-          "id": "sqlite-credentials",
-          "name": "SQLite DB"
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
         }
       }
     },
@@ -95,15 +95,15 @@
           "queryParameters": "={{ [$now.toFormat('yyyy-MM-dd')] }}"
         }
       },
-      "id": "sqlite-update-stats",
-      "name": "SQLite: 통계 업데이트",
-      "type": "n8n-nodes-base.sqlite",
+      "id": "postgres-update-stats",
+      "name": "PostgreSQL: 통계 업데이트",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [1250, 300],
       "credentials": {
-        "sqlite": {
-          "id": "sqlite-credentials",
-          "name": "SQLite DB"
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
         }
       }
     },
@@ -146,14 +146,14 @@
       "main": [
         [
           {
-            "node": "SQLite: YouTube 영상 목록",
+            "node": "PostgreSQL: YouTube 영상 목록",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SQLite: YouTube 영상 목록": {
+    "PostgreSQL: YouTube 영상 목록": {
       "main": [
         [
           {
@@ -179,25 +179,25 @@
       "main": [
         [
           {
-            "node": "SQLite: Analytics 저장",
+            "node": "PostgreSQL: Analytics 저장",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SQLite: Analytics 저장": {
+    "PostgreSQL: Analytics 저장": {
       "main": [
         [
           {
-            "node": "SQLite: 통계 업데이트",
+            "node": "PostgreSQL: 통계 업데이트",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SQLite: 통계 업데이트": {
+    "PostgreSQL: 통계 업데이트": {
       "main": [
         [
           {

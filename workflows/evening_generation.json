@@ -23,15 +23,15 @@
         "operation": "executeQuery",
         "query": "SELECT id, book_name, chapter, verse, korean_text, character_main, visual_prompt, vocal_prompt, music_prompt, emotion_values FROM scripture WHERE batch_status = 'completed' AND status = 'pending' ORDER BY batch_request_date ASC LIMIT 3"
       },
-      "id": "sqlite-get-ready",
-      "name": "SQLite: 준비된 구절 불러오기",
-      "type": "n8n-nodes-base.sqlite",
+      "id": "postgres-get-ready",
+      "name": "PostgreSQL: 준비된 구절 불러오기",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [450, 300],
       "credentials": {
-        "sqlite": {
-          "id": "sqlite-credentials",
-          "name": "SQLite DB"
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
         }
       }
     },
@@ -77,32 +77,21 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.suno.ai/v1/generate",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer {{ $credentials.sunoApi.apiKey }}"
-            }
-          ]
-        },
+        "url": "https://suno-api-production-ac35.up.railway.app/generate/description-mode",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             {
-              "name": "prompt",
+              "name": "gpt_description_prompt",
               "value": "={{ $json.music_prompt }}"
             },
             {
-              "name": "duration",
-              "value": "120"
+              "name": "make_instrumental",
+              "value": true
             },
             {
-              "name": "tags",
-              "value": "instrumental, orchestral, cinematic"
+              "name": "mv",
+              "value": "chirp-v3-5"
             }
           ]
         },
@@ -115,16 +104,10 @@
         }
       },
       "id": "suno-music",
-      "name": "Suno: 배경음악 생성",
+      "name": "Suno: 배경음악 생성 (Polling 필요)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1050, 200],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "suno-api-credentials",
-          "name": "Suno API"
-        }
-      }
+      "position": [1050, 200]
     },
     {
       "parameters": {
@@ -282,7 +265,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// 모든 API 결과를 통합하고 다운로드 준비\nconst items = $input.all();\nconst original = $('SQLite: 준비된 구절 불러오기').first().json;\n\n// 각 API 응답에서 URL 추출\nlet sunoUrl = '';\nlet fishUrl = '';\nlet hedraUrl = '';\nlet runwayUrl = '';\n\nfor (const item of items) {\n  const response = item.json;\n  if (response.url && response.url.includes('suno')) sunoUrl = response.url;\n  if (response.url && response.url.includes('fish')) fishUrl = response.url;\n  if (response.url && response.url.includes('hedra')) hedraUrl = response.url;\n  if (response.url && response.url.includes('runway')) runwayUrl = response.url;\n}\n\nreturn [{\n  json: {\n    episode_id: `ep_${original.id}_${Date.now()}`,\n    scripture_id: original.id,\n    book_name: original.book_name,\n    chapter: original.chapter,\n    verse: original.verse,\n    character: original.character_main,\n    suno_url: sunoUrl,\n    fish_url: fishUrl,\n    hedra_url: hedraUrl,\n    runway_url: runwayUrl,\n    output_dir: './output'\n  }\n}];"
+        "jsCode": "// 모든 API 결과를 통합하고 다운로드 준비\nconst items = $input.all();\nconst original = $('PostgreSQL: 준비된 구절 불러오기').first().json;\n\n// 각 API 응답에서 URL 추출\nlet sunoUrl = '';\nlet fishUrl = '';\nlet hedraUrl = '';\nlet runwayUrl = '';\n\nfor (const item of items) {\n  const response = item.json;\n  if (response.url && response.url.includes('suno')) sunoUrl = response.url;\n  if (response.url && response.url.includes('fish')) fishUrl = response.url;\n  if (response.url && response.url.includes('hedra')) hedraUrl = response.url;\n  if (response.url && response.url.includes('runway')) runwayUrl = response.url;\n}\n\nreturn [{\n  json: {\n    episode_id: `ep_${original.id}_${Date.now()}`,\n    scripture_id: original.id,\n    book_name: original.book_name,\n    chapter: original.chapter,\n    verse: original.verse,\n    character: original.character_main,\n    suno_url: sunoUrl,\n    fish_url: fishUrl,\n    hedra_url: hedraUrl,\n    runway_url: runwayUrl,\n    output_dir: './output'\n  }\n}];"
       },
       "id": "combine-api-results",
       "name": "API 결과 통합",
@@ -318,7 +301,7 @@
         "operation": "upload",
         "binaryData": true,
         "title": "={{ $json.book_name }} {{ $json.chapter }}:{{ $json.verse }}",
-        "description": "={{ '성경을 영화처럼 경험하세요.\\n\\n' + $('SQLite: 준비된 구절 불러오기').first().json.korean_text + '\\n\\n#성경 #뮤지컬 #AI #영화' }}",
+        "description": "={{ '성경을 영화처럼 경험하세요.\\n\\n' + $('PostgreSQL: 준비된 구절 불러오기').first().json.korean_text + '\\n\\n#성경 #뮤지컬 #AI #영화' }}",
         "categoryId": "24",
         "privacyStatus": "public",
         "tags": "성경,뮤지컬,AI,영화",
@@ -344,15 +327,15 @@
           "queryParameters": "={{ [$json.output_dir + '/' + $json.episode_id + '_final.mp4', $json.output_dir + '/' + $json.episode_id + '_thumbnail.jpg', $('YouTube: 자동 업로드').first().json.url, $('YouTube: 자동 업로드').first().json.id, new Date().toISOString(), new Date().toISOString(), $json.scripture_id] }}"
         }
       },
-      "id": "sqlite-final-update",
-      "name": "SQLite: 최종 상태 업데이트",
-      "type": "n8n-nodes-base.sqlite",
+      "id": "postgres-final-update",
+      "name": "PostgreSQL: 최종 상태 업데이트",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [2250, 300],
       "credentials": {
-        "sqlite": {
-          "id": "sqlite-credentials",
-          "name": "SQLite DB"
+        "postgres": {
+          "id": "postgresql-credentials",
+          "name": "Railway PostgreSQL"
         }
       }
     }
@@ -362,14 +345,14 @@
       "main": [
         [
           {
-            "node": "SQLite: 준비된 구절 불러오기",
+            "node": "PostgreSQL: 준비된 구절 불러오기",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SQLite: 준비된 구절 불러오기": {
+    "PostgreSQL: 준비된 구절 불러오기": {
       "main": [
         [
           {
@@ -509,7 +492,7 @@
       "main": [
         [
           {
-            "node": "SQLite: 최종 상태 업데이트",
+            "node": "PostgreSQL: 최종 상태 업데이트",
             "type": "main",
             "index": 0
           }
