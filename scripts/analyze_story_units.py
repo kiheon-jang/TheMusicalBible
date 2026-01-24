@@ -100,7 +100,7 @@ class StoryUnitAnalyzer:
 
         try:
             message = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-20250514",
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -313,7 +313,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if not CLAUDE_API_KEY or CLAUDE_API_KEY.startswith("sk-ant-"):
+    if not CLAUDE_API_KEY or not CLAUDE_API_KEY.startswith("sk-ant-"):
         print("❌ CLAUDE_API_KEY 환경변수를 설정하세요")
         print("   export CLAUDE_API_KEY='sk-ant-...'")
         sys.exit(1)
