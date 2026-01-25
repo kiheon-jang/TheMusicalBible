@@ -39,7 +39,8 @@ ENV N8N_BASIC_AUTH_ACTIVE=true
 ENV N8N_HOST=0.0.0.0
 ENV N8N_PORT=5678
 ENV N8N_PROTOCOL=https
-ENV N8N_NODES_INCLUDE=n8n-nodes-base.executeCommand
+# n8n 2.0에서는 NODES_EXCLUDE를 사용하여 executeCommand 노드 활성화
+ENV NODES_EXCLUDE=[]
 
 # 포트 노출
 EXPOSE 5678
