@@ -19,24 +19,37 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
 def get_authenticated_service():
     """OAuth2 인증을 통해 YouTube API 서비스 객체 반환"""
     creds = None
-    token_file = os.path.expanduser('~/.youtube_token.pickle')
-    credentials_file = os.path.expanduser('~/.youtube_credentials.json')
     
-    # 환경 변수에서 토큰 확인 (n8n에서 사용)
+    # 환경 변수에서 토큰 확인 (Railway/n8n에서 사용)
     access_token = os.environ.get('YOUTUBE_ACCESS_TOKEN')
-    if access_token:
+    client_id = os.environ.get('YOUTUBE_CLIENT_ID')
+    client_secret = os.environ.get('YOUTUBE_CLIENT_SECRET')
+    refresh_token = os.environ.get('YOUTUBE_REFRESH_TOKEN')
+    
+    if access_token and client_id and client_secret:
         from google.oauth2.credentials import Credentials as OAuth2Credentials
         creds = OAuth2Credentials(
             token=access_token,
-            refresh_token=os.environ.get('YOUTUBE_REFRESH_TOKEN'),
+            refresh_token=refresh_token,
             token_uri='https://oauth2.googleapis.com/token',
-            client_id=os.environ.get('YOUTUBE_CLIENT_ID'),
-            client_secret=os.environ.get('YOUTUBE_CLIENT_SECRET'),
+            client_id=client_id,
+            client_secret=client_secret,
             scopes=SCOPES
         )
+        # 토큰이 만료된 경우 자동 갱신
         if creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            try:
+                creds.refresh(Request())
+                print("✅ OAuth2 토큰 자동 갱신 완료")
+            except Exception as e:
+                print(f"⚠️  토큰 갱신 실패: {e}")
+                print("YOUTUBE_REFRESH_TOKEN을 확인하세요.")
+                sys.exit(1)
         return build('youtube', 'v3', credentials=creds)
+    
+    # 로컬 환경: 파일 기반 인증
+    token_file = os.path.expanduser('~/.youtube_token.pickle')
+    credentials_file = os.path.expanduser('~/.youtube_credentials.json')
     
     # 저장된 토큰 로드
     if os.path.exists(token_file):
@@ -49,9 +62,19 @@ def get_authenticated_service():
             creds.refresh(Request())
         else:
             if not os.path.exists(credentials_file):
-                print("ERROR: ~/.youtube_credentials.json 파일이 없습니다.")
-                print("Google Cloud Console에서 OAuth2 클라이언트 ID를 다운로드하세요.")
-                print("또는 YOUTUBE_ACCESS_TOKEN 환경 변수를 설정하세요.")
+                print("=" * 70)
+                print("❌ YouTube OAuth2 인증 정보가 없습니다.")
+                print("=" * 70)
+                print("\n📋 해결 방법:")
+                print("1. 환경 변수 설정 (Railway 권장):")
+                print("   YOUTUBE_CLIENT_ID=...")
+                print("   YOUTUBE_CLIENT_SECRET=...")
+                print("   YOUTUBE_ACCESS_TOKEN=...")
+                print("   YOUTUBE_REFRESH_TOKEN=...")
+                print("\n2. 또는 로컬 파일 설정:")
+                print("   ~/.youtube_credentials.json 파일 생성")
+                print("   Google Cloud Console에서 OAuth2 클라이언트 ID 다운로드")
+                print("=" * 70)
                 sys.exit(1)
             
             flow = InstalledAppFlow.from_client_secrets_file(
