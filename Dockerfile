@@ -1,8 +1,7 @@
 # The Musical Bible (TMB) - n8n Dockerfile
 # Railway 배포용
-# n8n 1.62 사용 (2.0은 executeCommand 노드 제한으로 인해 1.x 사용)
 
-FROM n8n/n8n:1.62.0
+FROM n8n/n8n:latest
 
 # 시스템 패키지 업데이트 및 필수 도구 설치
 USER root
@@ -40,7 +39,6 @@ ENV N8N_BASIC_AUTH_ACTIVE=true
 ENV N8N_HOST=0.0.0.0
 ENV N8N_PORT=5678
 ENV N8N_PROTOCOL=https
-# n8n 1.x에서는 executeCommand 노드가 기본적으로 활성화됨
 
 # 포트 노출
 EXPOSE 5678

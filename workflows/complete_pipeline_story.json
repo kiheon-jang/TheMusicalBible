@@ -551,7 +551,7 @@
     },
     {
       "parameters": {
-        "command": "={{ 'python3 scripts/upload_youtube.py \"' + $json.youtube_video_path + '\" \"' + $json.youtube_thumbnail_path + '\" \"' + $json.youtube_title.replace(/\"/g, \\\"\\\\\\\"\\\") + '\" \"' + $json.youtube_description.replace(/\"/g, \\\"\\\\\\\"\\\").replace(/\\n/g, \\\"\\\\n\\\") + '\" \"' + $json.output_dir + '/' + $json.episode_id + '_youtube_response.json\"' }}"
+        "command": "={{ 'cd /app && python3 scripts/upload_youtube.py \"' + $json.youtube_video_path + '\" \"' + $json.youtube_thumbnail_path + '\" \"' + $json.youtube_title.replace(/\"/g, \\\"\\\\\\\"\\\") + '\" \"' + $json.youtube_description.replace(/\"/g, \\\"\\\\\\\"\\\").replace(/\\n/g, \\\"\\\\n\\\") + '\" \"' + $json.output_dir + '/' + $json.episode_id + '_youtube_response.json\"' }}"
       },
       "id": "youtube-upload-python",
       "name": "YouTube: 업로드 (Python)",

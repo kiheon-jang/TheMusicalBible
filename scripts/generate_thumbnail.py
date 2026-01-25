@@ -75,12 +75,8 @@ def add_text_overlay(image_path: str, output_path: str, metadata: dict) -> bool:
                 title_font = ImageFont.load_default()
                 subtitle_font = ImageFont.load_default()
         
-        # 제목 텍스트 (verses_range 우선, 없으면 chapter:verse)
-        verses_range = metadata.get('verses_range', '')
-        if verses_range:
-            title = f"{metadata.get('book_name', '')} {verses_range}"
-        else:
-            title = f"{metadata.get('book_name', '')} {metadata.get('chapter', '')}:{metadata.get('verse', '')}"
+        # 제목 텍스트
+        title = f"{metadata.get('book_name', '')} {metadata.get('chapter', '')}:{metadata.get('verse', '')}"
         
         # 감정 이모지 매핑
         emotion_emoji = {

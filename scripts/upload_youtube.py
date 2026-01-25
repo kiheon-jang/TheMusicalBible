@@ -161,6 +161,14 @@ if __name__ == '__main__':
     description = sys.argv[4]
     response_file = sys.argv[5]
     
+    # 경로 정규화 (상대 경로 지원)
+    if not os.path.isabs(video_path):
+        video_path = os.path.abspath(video_path)
+    if not os.path.isabs(thumbnail_path):
+        thumbnail_path = os.path.abspath(thumbnail_path)
+    if not os.path.isabs(response_file):
+        response_file = os.path.abspath(response_file)
+    
     if not os.path.exists(video_path):
         print(f"ERROR: 영상 파일이 없습니다: {video_path}")
         sys.exit(1)
