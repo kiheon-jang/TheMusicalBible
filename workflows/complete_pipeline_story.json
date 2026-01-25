@@ -512,24 +512,12 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.VIDEO_PROCESSOR_API_URL || 'http://localhost:8000' }}/api/compose",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ {\n  \"episode_id\": $json.episode_id,\n  \"hedra_url\": $json.hedra_url,\n  \"fish_url\": $json.fish_url,\n  \"suno_url\": $json.suno_url,\n  \"runway_url\": $json.runway_url || '',\n  \"scripture_text\": $json.story_text,\n  \"book_info\": $json.book_info,\n  \"output_dir\": $json.output_dir\n} }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 300000
-        }
+        "command": "={{ 'bash -c \"cd /data && chmod +x scripts/ffmpeg_compose.sh && scripts/ffmpeg_compose.sh ' + $json.episode_id + ' \\\"' + ($json.hedra_url || '') + '\\\" \\\"' + ($json.fish_url || '') + '\\\" \\\"' + ($json.suno_url || '') + '\\\" \\\"' + ($json.runway_url || '') + '\\\" ' + ($json.output_dir || '/tmp/tmb_output') + ' 2>&1\"' }}"
       },
-      "id": "ffmpeg-compose-api",
-      "name": "FFmpeg: 영상 합성 (API)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "ffmpeg-compose",
+      "name": "FFmpeg: 영상 합성",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
       "position": [
         3450,
         600
@@ -538,24 +526,12 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.VIDEO_PROCESSOR_API_URL || 'http://localhost:8000' }}/api/thumbnail",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ {\n  \"video_path\": $('FFmpeg: 영상 합성 (API)').first().json.video_path || ($json.output_dir + '/' + $json.episode_id + '_final.mp4'),\n  \"output_path\": $json.output_dir + '/' + $json.episode_id + '_thumbnail.jpg',\n  \"metadata\": {\n    \"book_name\": $json.book_name,\n    \"verses_range\": $json.verses_range,\n    \"emotion\": \"reverent\",\n    \"character\": $json.character\n  }\n} }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 60000
-        }
+        "command": "={{ 'python3 /data/scripts/generate_thumbnail.py ' + ($json.output_dir || '/tmp/tmb_output') + '/' + $json.episode_id + '_final.mp4 ' + ($json.output_dir || '/tmp/tmb_output') + '/' + $json.episode_id + '_thumbnail.jpg \\'{\"book_name\":\"' + $json.book_name + '\",\"verses_range\":\"' + ($json.verses_range || '') + '\",\"emotion\":\"reverent\",\"character\":\"' + ($json.character || 'biblical_character') + '}\\'' }}"
       },
-      "id": "thumbnail-generate-api",
-      "name": "Python: 썸네일 생성 (API)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "generate-thumbnail",
+      "name": "Python: 썸네일 생성",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
       "position": [
         3650,
         600
@@ -564,7 +540,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// FFmpeg와 썸네일 결과 통합\nconst composeResult = $('FFmpeg: 영상 합성 (API)').first().json;\nconst thumbnailResult = $('Python: 썸네일 생성 (API)').first().json;\nconst original = $('최종 데이터 통합').first().json;\n\nconst finalVideoPath = composeResult.video_path || (original.output_dir + '/' + original.episode_id + '_final.mp4');\nconst thumbnailPath = thumbnailResult.thumbnail_path || (original.output_dir + '/' + original.episode_id + '_thumbnail.jpg');\n\nreturn [{\n  json: {\n    ...original,\n    final_video_path: finalVideoPath,\n    thumbnail_path: thumbnailPath,\n    compose_success: composeResult.success || false,\n    thumbnail_success: thumbnailResult.success || false\n  }\n}];"
+        "jsCode": "// FFmpeg와 썸네일 결과 통합\nconst original = $('최종 데이터 통합').first().json;\nconst outputDir = original.output_dir || '/tmp/tmb_output';\n\nreturn [{\n  json: {\n    ...original,\n    final_video_path: outputDir + '/' + original.episode_id + '_final.mp4',\n    thumbnail_path: outputDir + '/' + original.episode_id + '_thumbnail.jpg',\n    compose_success: true,\n    thumbnail_success: true\n  }\n}];"
       },
       "id": "merge-video-results",
       "name": "영상 결과 통합",
@@ -879,25 +855,25 @@
       "main": [
         [
           {
-            "node": "FFmpeg: 영상 합성 (API)",
+            "node": "FFmpeg: 영상 합성",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "FFmpeg: 영상 합성 (API)": {
+    "FFmpeg: 영상 합성": {
       "main": [
         [
           {
-            "node": "Python: 썸네일 생성 (API)",
+            "node": "Python: 썸네일 생성",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Python: 썸네일 생성 (API)": {
+    "Python: 썸네일 생성": {
       "main": [
         [
           {
