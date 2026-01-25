@@ -538,19 +538,24 @@
     },
     {
       "parameters": {
-        "resource": "video",
-        "operation": "upload",
-        "binaryData": true,
-        "binaryPropertyName": "data",
-        "title": "={{ $json.book_name + ' ' + $json.verses_range }}",
-        "description": "={{ '성경을 영화처럼 경험하세요.\\n\\n' + $('스토리 프롬프트 파싱').first().json.title + '\\n\\n' + ($('스토리 프롬프트 파싱').first().json.key_theme || '') + '\\n\\n#성경 #뮤지컬 #AI #영화' }}",
-        "categoryId": "24",
-        "privacyStatus": "public",
-        "tags": "성경,뮤지컬,AI,영화"
+        "jsCode": "// YouTube 업로드 준비\nconst data = $input.first().json;\nconst original = $('스토리 프롬프트 파싱').first().json;\n\nconst title = `${data.book_name} ${data.verses_range}`;\nconst description = `성경을 영화처럼 경험하세요.\\n\\n${original.title}\\n\\n${original.key_theme || ''}\\n\\n#성경 #뮤지컬 #AI #영화`;\nconst videoPath = `${data.output_dir}/${data.episode_id}_final.mp4`;\nconst thumbnailPath = `${data.output_dir}/${data.episode_id}_thumbnail.jpg`;\n\nreturn [{\n  json: {\n    ...data,\n    youtube_title: title,\n    youtube_description: description,\n    youtube_video_path: videoPath,\n    youtube_thumbnail_path: thumbnailPath\n  }\n}];"
       },
-      "id": "youtube-upload",
-      "name": "YouTube: 업로드",
-      "type": "n8n-nodes-base.youtube",
+      "id": "prepare-youtube-upload",
+      "name": "YouTube 업로드 준비",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3650,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{ 'python3 scripts/upload_youtube.py \"' + $json.youtube_video_path + '\" \"' + $json.youtube_thumbnail_path + '\" \"' + $json.youtube_title.replace(/\"/g, \\\"\\\\\\\"\\\") + '\" \"' + $json.youtube_description.replace(/\"/g, \\\"\\\\\\\"\\\").replace(/\\n/g, \\\"\\\\n\\\") + '\" \"' + $json.output_dir + '/' + $json.episode_id + '_youtube_response.json\"' }}"
+      },
+      "id": "youtube-upload-python",
+      "name": "YouTube: 업로드 (Python)",
+      "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
         3850,
@@ -559,10 +564,23 @@
     },
     {
       "parameters": {
+        "jsCode": "// YouTube 업로드 응답 파싱\nconst data = $input.first().json;\nconst fs = require('fs');\nconst responsePath = `${data.output_dir}/${data.episode_id}_youtube_response.json`;\n\nlet youtubeData = {};\ntry {\n  if (fs.existsSync(responsePath)) {\n    const responseContent = fs.readFileSync(responsePath, 'utf8');\n    const response = JSON.parse(responseContent);\n    youtubeData = {\n      youtube_video_id: response.id || '',\n      youtube_url: `https://www.youtube.com/watch?v=${response.id || ''}`,\n      youtube_thumbnail_url: response.snippet?.thumbnails?.high?.url || ''\n    };\n  }\n} catch (err) {\n  console.error('YouTube 응답 파싱 실패:', err);\n}\n\nreturn [{\n  json: {\n    ...data,\n    ...youtubeData\n  }\n}];"
+      },
+      "id": "parse-youtube-response",
+      "name": "YouTube 응답 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4050,
+        600
+      ]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
         "query": "UPDATE story_units SET status = 'completed', final_video_path = $1, thumbnail_path = $2, youtube_url = $3, youtube_video_id = $4, upload_date = $5, generation_date = $6 WHERE id = $7",
         "additionalFields": {
-          "queryParameters": "={{ [$json.output_dir + '/' + $json.episode_id + '_final.mp4', $json.output_dir + '/' + $json.episode_id + '_thumbnail.jpg', $('YouTube: 업로드').first().json.url, $('YouTube: 업로드').first().json.id, new Date().toISOString(), new Date().toISOString(), $json.story_id] }}"
+          "queryParameters": "={{ [$json.output_dir + '/' + $json.episode_id + '_final.mp4', $json.output_dir + '/' + $json.episode_id + '_thumbnail.jpg', $json.youtube_url || '', $json.youtube_video_id || '', new Date().toISOString(), new Date().toISOString(), $json.story_id] }}"
         }
       },
       "id": "postgres-final-update",
@@ -862,7 +880,40 @@
       "main": [
         [
           {
-            "node": "YouTube: 업로드",
+            "node": "YouTube 업로드 준비",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube 업로드 준비": {
+      "main": [
+        [
+          {
+            "node": "YouTube: 업로드 (Python)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube: 업로드 (Python)": {
+      "main": [
+        [
+          {
+            "node": "YouTube 응답 파싱",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube 응답 파싱": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL: 최종 업데이트",
             "type": "main",
             "index": 0
           }
