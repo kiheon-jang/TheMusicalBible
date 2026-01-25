@@ -512,7 +512,7 @@
     },
     {
       "parameters": {
-        "command": "={{ 'bash -c \"cd /data && chmod +x scripts/ffmpeg_compose.sh && scripts/ffmpeg_compose.sh ' + $json.episode_id + ' \\\"' + ($json.hedra_url || '') + '\\\" \\\"' + ($json.fish_url || '') + '\\\" \\\"' + ($json.suno_url || '') + '\\\" \\\"' + ($json.runway_url || '') + '\\\" ' + ($json.output_dir || '/tmp/tmb_output') + ' 2>&1\"' }}"
+        "command": "={{ 'bash -c \"chmod +x scripts/ffmpeg_compose.sh && scripts/ffmpeg_compose.sh ' + $json.episode_id + ' ' + $json.hedra_url + ' ' + $json.fish_url + ' ' + $json.suno_url + ' ' + ($json.runway_url || '') + ' ' + $json.output_dir + '\"' }}"
       },
       "id": "ffmpeg-compose",
       "name": "FFmpeg: 영상 합성",
@@ -521,12 +521,11 @@
       "position": [
         3450,
         600
-      ],
-      "continueOnFail": false
+      ]
     },
     {
       "parameters": {
-        "command": "={{ 'python3 /data/scripts/generate_thumbnail.py ' + ($json.output_dir || '/tmp/tmb_output') + '/' + $json.episode_id + '_final.mp4 ' + ($json.output_dir || '/tmp/tmb_output') + '/' + $json.episode_id + '_thumbnail.jpg \\'{\"book_name\":\"' + $json.book_name + '\",\"verses_range\":\"' + ($json.verses_range || '') + '\",\"emotion\":\"reverent\",\"character\":\"' + ($json.character || 'biblical_character') + '}\\'' }}"
+        "command": "={{ 'python3 scripts/generate_thumbnail.py ' + $json.output_dir + '/' + $json.episode_id + '_final.mp4 ' + $json.output_dir + '/' + $json.episode_id + '_thumbnail.jpg \\'{\"book_name\":\"' + $json.book_name + '\",\"verses_range\":\"' + $json.verses_range + '\",\"emotion\":\"reverent\",\"character\":\"' + $json.character + '}\\'' }}"
       },
       "id": "generate-thumbnail",
       "name": "Python: 썸네일 생성",
@@ -534,20 +533,6 @@
       "typeVersion": 1,
       "position": [
         3650,
-        600
-      ],
-      "continueOnFail": false
-    },
-    {
-      "parameters": {
-        "jsCode": "// FFmpeg와 썸네일 결과 통합\nconst original = $('최종 데이터 통합').first().json;\nconst outputDir = original.output_dir || '/tmp/tmb_output';\n\nreturn [{\n  json: {\n    ...original,\n    final_video_path: outputDir + '/' + original.episode_id + '_final.mp4',\n    thumbnail_path: outputDir + '/' + original.episode_id + '_thumbnail.jpg',\n    compose_success: true,\n    thumbnail_success: true\n  }\n}];"
-      },
-      "id": "merge-video-results",
-      "name": "영상 결과 통합",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3750,
         600
       ]
     },
@@ -568,7 +553,7 @@
       "type": "n8n-nodes-base.youtube",
       "typeVersion": 1,
       "position": [
-        4050,
+        3850,
         600
       ]
     },
@@ -585,7 +570,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
-        4450,
+        4050,
         600
       ]
     }
@@ -874,17 +859,6 @@
       ]
     },
     "Python: 썸네일 생성": {
-      "main": [
-        [
-          {
-            "node": "영상 결과 통합",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "영상 결과 통합": {
       "main": [
         [
           {
