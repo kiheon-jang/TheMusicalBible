@@ -162,6 +162,456 @@
         1650,
         500
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://suno-api-production-ac35.up.railway.app/api/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.phase3_suno_prompt }}"
+            },
+            {
+              "name": "custom_mode",
+              "value": "true"
+            },
+            {
+              "name": "lyrics",
+              "value": "={{ $json.phase3_vocal_lyrics }}"
+            },
+            {
+              "name": "make_instrumental",
+              "value": "false"
+            },
+            {
+              "name": "wait_audio",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "suno-start",
+      "name": "Suno: 음악 생성 시작",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Suno Task ID 추출\nconst response = $input.first().json;\nconst taskId = response[0]?.id || '';\n\nreturn [{\n  json: {\n    ...response,\n    suno_task_id: taskId,\n    poll_count: 0\n  }\n}];"
+      },
+      "id": "extract-suno-task",
+      "name": "Suno Task ID 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "wait-suno-10s",
+      "name": "10초 대기",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://suno-api-production-ac35.up.railway.app/api/get/={{ $json.suno_task_id }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "poll-suno-status",
+      "name": "Suno: 상태 확인",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json[0]?.status }}",
+              "rightValue": "complete",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-suno-complete",
+      "name": "Suno: 완료 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Suno 음악 URL 추출\nconst response = $input.first().json;\nconst audioUrl = response[0]?.audio_url || '';\n\nreturn [{\n  json: {\n    suno_url: audioUrl,\n    suno_complete: true\n  }\n}];"
+      },
+      "id": "extract-suno-url",
+      "name": "Suno URL 추출",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2850,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.poll_count }}",
+              "rightValue": "30",
+              "operator": {
+                "type": "number",
+                "operation": "smaller"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-suno-timeout",
+      "name": "Suno: 타임아웃 체크",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2850,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Poll count 증가\nconst data = $input.first().json;\nreturn [{\n  json: {\n    ...data,\n    poll_count: (data.poll_count || 0) + 1\n  }\n}];"
+      },
+      "id": "increment-suno-poll",
+      "name": "Poll Count 증가",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3050,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fish.audio/v1/tts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ={{ $credentials.fishAudioApi.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.fish_emotion_tags + ' ' + $json.phase3_vocal_lyrics }}"
+            },
+            {
+              "name": "reference_id",
+              "value": "={{ ($json.main_characters && Array.isArray($json.main_characters) ? $json.main_characters[0] : 'biblical_character') + '_voice_id_1' }}"
+            },
+            {
+              "name": "format",
+              "value": "mp3"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "fish-audio",
+      "name": "Fish Audio: 음성 생성",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1850,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hedra.com/v1/characters",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $credentials.hedraApi.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.phase2_hedra_prompt }}"
+            },
+            {
+              "name": "aspectRatio",
+              "value": "9:16"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "hedra-video",
+      "name": "Hedra: 립싱크 영상 생성",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1850,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.runwayml.com/v1/image_to_video",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ={{ $credentials.runwayApi.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "promptText",
+              "value": "={{ $json.phase1_runway_prompt }}"
+            },
+            {
+              "name": "duration",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "runway-background",
+      "name": "Runway: 배경 영상 생성",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1850,
+        900
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByIndex",
+        "options": {}
+      },
+      "id": "merge-all-results",
+      "name": "모든 결과 병합",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        3050,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 모든 API 결과 통합 (스토리 단위)\nconst original = $('스토리 프롬프트 파싱').first().json;\nconst sunoData = $('Suno URL 추출').first().json;\nconst fishData = $('Fish Audio: 음성 생성').first().json;\nconst hedraData = $('Hedra: 립싱크 영상 생성').first().json;\nconst runwayData = $('Runway: 배경 영상 생성').first().json;\n\nconst episodeId = `story_${original.story_id}_${Date.now()}`;\nconst mainChar = original.main_characters && Array.isArray(original.main_characters) ? original.main_characters[0] : 'biblical_character';\n\nreturn [{\n  json: {\n    episode_id: episodeId,\n    story_id: original.story_id,\n    book_name: original.book_name,\n    verses_range: original.verses_range,\n    title: original.title,\n    story_text: original.title + '\\n' + (original.key_theme || ''),\n    book_info: `${original.book_name} ${original.verses_range}`,\n    character: mainChar,\n    suno_url: sunoData?.suno_url || '',\n    fish_url: fishData?.audio_url || fishData?.url || '',\n    hedra_url: hedraData?.videoUrl || hedraData?.url || '',\n    runway_url: runwayData?.url || '',\n    output_dir: './output'\n  }\n}];"
+      },
+      "id": "combine-all-api-results",
+      "name": "최종 데이터 통합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3250,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VIDEO_PROCESSOR_API_URL || 'http://localhost:8000' }}/api/compose",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"episode_id\": $json.episode_id,\n  \"hedra_url\": $json.hedra_url,\n  \"fish_url\": $json.fish_url,\n  \"suno_url\": $json.suno_url,\n  \"runway_url\": $json.runway_url || '',\n  \"scripture_text\": $json.story_text,\n  \"book_info\": $json.book_info,\n  \"output_dir\": $json.output_dir\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 300000
+        }
+      },
+      "id": "ffmpeg-compose-api",
+      "name": "FFmpeg: 영상 합성 (API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3450,
+        600
+      ],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VIDEO_PROCESSOR_API_URL || 'http://localhost:8000' }}/api/thumbnail",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"video_path\": $('FFmpeg: 영상 합성 (API)').first().json.video_path || ($json.output_dir + '/' + $json.episode_id + '_final.mp4'),\n  \"output_path\": $json.output_dir + '/' + $json.episode_id + '_thumbnail.jpg',\n  \"metadata\": {\n    \"book_name\": $json.book_name,\n    \"verses_range\": $json.verses_range,\n    \"emotion\": \"reverent\",\n    \"character\": $json.character\n  }\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "thumbnail-generate-api",
+      "name": "Python: 썸네일 생성 (API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3650,
+        600
+      ],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// FFmpeg와 썸네일 결과 통합\nconst composeResult = $('FFmpeg: 영상 합성 (API)').first().json;\nconst thumbnailResult = $('Python: 썸네일 생성 (API)').first().json;\nconst original = $('최종 데이터 통합').first().json;\n\nconst finalVideoPath = composeResult.video_path || (original.output_dir + '/' + original.episode_id + '_final.mp4');\nconst thumbnailPath = thumbnailResult.thumbnail_path || (original.output_dir + '/' + original.episode_id + '_thumbnail.jpg');\n\nreturn [{\n  json: {\n    ...original,\n    final_video_path: finalVideoPath,\n    thumbnail_path: thumbnailPath,\n    compose_success: composeResult.success || false,\n    thumbnail_success: thumbnailResult.success || false\n  }\n}];"
+      },
+      "id": "merge-video-results",
+      "name": "영상 결과 통합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3750,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "title": "={{ $json.book_name + ' ' + $json.verses_range }}",
+        "description": "={{ '성경을 영화처럼 경험하세요.\\n\\n' + $('스토리 프롬프트 파싱').first().json.title + '\\n\\n' + ($('스토리 프롬프트 파싱').first().json.key_theme || '') + '\\n\\n#성경 #뮤지컬 #AI #영화' }}",
+        "categoryId": "24",
+        "privacyStatus": "public",
+        "tags": "성경,뮤지컬,AI,영화"
+      },
+      "id": "youtube-upload",
+      "name": "YouTube: 업로드",
+      "type": "n8n-nodes-base.youtube",
+      "typeVersion": 1,
+      "position": [
+        4050,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE story_units SET status = 'completed', final_video_path = $1, thumbnail_path = $2, youtube_url = $3, youtube_video_id = $4, upload_date = $5, generation_date = $6 WHERE id = $7",
+        "additionalFields": {
+          "queryParameters": "={{ [$json.output_dir + '/' + $json.episode_id + '_final.mp4', $json.output_dir + '/' + $json.episode_id + '_thumbnail.jpg', $('YouTube: 업로드').first().json.url, $('YouTube: 업로드').first().json.id, new Date().toISOString(), new Date().toISOString(), $json.story_id] }}"
+        }
+      },
+      "id": "postgres-final-update",
+      "name": "PostgreSQL: 최종 업데이트",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        4450,
+        600
+      ]
     }
   ],
   "connections": {
@@ -247,6 +697,233 @@
         [
           {
             "node": "병렬 분기 (4개 API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "병렬 분기 (4개 API)": {
+      "main": [
+        [
+          {
+            "node": "Suno: 음악 생성 시작",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fish Audio: 음성 생성",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Hedra: 립싱크 영상 생성",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Runway: 배경 영상 생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno: 음악 생성 시작": {
+      "main": [
+        [
+          {
+            "node": "Suno Task ID 추출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno Task ID 추출": {
+      "main": [
+        [
+          {
+            "node": "10초 대기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10초 대기": {
+      "main": [
+        [
+          {
+            "node": "Suno: 상태 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno: 상태 확인": {
+      "main": [
+        [
+          {
+            "node": "Suno: 완료 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno: 완료 체크": {
+      "main": [
+        [
+          {
+            "node": "Suno URL 추출",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Suno: 타임아웃 체크",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno: 타임아웃 체크": {
+      "main": [
+        [
+          {
+            "node": "Poll Count 증가",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "모든 결과 병합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Count 증가": {
+      "main": [
+        [
+          {
+            "node": "10초 대기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suno URL 추출": {
+      "main": [
+        [
+          {
+            "node": "모든 결과 병합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fish Audio: 음성 생성": {
+      "main": [
+        [
+          {
+            "node": "모든 결과 병합",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Hedra: 립싱크 영상 생성": {
+      "main": [
+        [
+          {
+            "node": "모든 결과 병합",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Runway: 배경 영상 생성": {
+      "main": [
+        [
+          {
+            "node": "모든 결과 병합",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "모든 결과 병합": {
+      "main": [
+        [
+          {
+            "node": "최종 데이터 통합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "최종 데이터 통합": {
+      "main": [
+        [
+          {
+            "node": "FFmpeg: 영상 합성 (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FFmpeg: 영상 합성 (API)": {
+      "main": [
+        [
+          {
+            "node": "Python: 썸네일 생성 (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Python: 썸네일 생성 (API)": {
+      "main": [
+        [
+          {
+            "node": "영상 결과 통합",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "영상 결과 통합": {
+      "main": [
+        [
+          {
+            "node": "YouTube: 업로드",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube: 업로드": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL: 최종 업데이트",
             "type": "main",
             "index": 0
           }
