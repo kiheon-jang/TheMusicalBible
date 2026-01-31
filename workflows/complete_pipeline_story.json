@@ -92,7 +92,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Claude 스토리 응답 파싱\n// 원본 스토리 데이터는 이전 노드에서 가져오기\nlet original;\ntry {\n  original = $('Claude 요청 본문 준비').first().json;\n} catch (e) {\n  // 폴백: 입력에서 직접 가져오기\n  original = $input.first().json;\n}\nconst claudeResponse = $input.first().json;\n\nlet narrative = {};\nlet phase1 = {};\nlet phase2 = [];\nlet phase3 = {};\nlet emotionValues = { fear: 0.0, resolve: 0.5, confusion: 0.0 };\n\ntry {\n  const content = claudeResponse.content || [];\n  const text = content.find(c => c.type === 'text')?.text || '';\n  \n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    narrative = parsed.narrative_structure || {};\n    phase1 = parsed.phase1_background || {};\n    phase2 = parsed.phase2_characters || [];\n    phase3 = parsed.phase3_aria || {};\n    emotionValues = parsed.emotion_values || emotionValues;\n  }\n} catch (e) {\n  console.error('JSON 파싱 실패:', e);\n  // 폴백\n  phase1 = {\n    runway_prompt: `Wide cinematic shot of ${original.title}, biblical scene`\n  };\n  phase2 = [{\n    character: original.main_characters?.[0] || 'biblical character',\n    hedra_prompt: `Biblical scene with ${original.main_characters?.[0] || 'character'}`\n  }];\n  phase3 = {\n    vocal_lyrics: `${original.title}\\n${original.key_theme}`,\n    suno_prompt: 'Cinematic orchestral epic dramatic'\n  };\n}\n\n// Fish Audio 감정 태그\nlet fishTags = [];\nif (emotionValues.fear > 0.7) fishTags.push('scared', 'nervous');\nelse if (emotionValues.fear > 0.4) fishTags.push('worried');\nif (emotionValues.confusion > 0.6) fishTags.push('confused');\nif (emotionValues.resolve > 0.8) fishTags.push('confident', 'determined');\nif (fishTags.length === 0) fishTags.push('calm');\n\nconst phase3Tags = phase3.vocal_emotion_tags || '';\nif (phase3Tags) fishTags.push(phase3Tags);\nconst fishEmotionString = `(${fishTags.join(')(')})` ;\n\n// 주요 캐릭터 선택 (첫 번째)\nconst mainChar = phase2[0] || {};\n\nreturn [{\n  json: {\n    story_id: original.id,\n    book_name: original.book_name,\n    verses_range: original.verses_range,\n    title: original.title,\n    verse_count: original.verse_count,\n    estimated_duration_sec: original.estimated_duration_sec,\n    \n    // 서사 구조\n    narrative_structure: JSON.stringify(narrative),\n    \n    // Phase 1\n    phase1_location: phase1.location || '',\n    phase1_runway_prompt: phase1.runway_prompt || '',\n    phase1_duration: Math.ceil(original.estimated_duration_sec * 0.25),\n    \n    // Phase 2\n    phase2_character_description: mainChar.description || '',\n    phase2_hedra_prompt: mainChar.hedra_prompt || '',\n    phase2_duration: Math.ceil(original.estimated_duration_sec * 0.35),\n    \n    // Phase 3\n    phase3_vocal_lyrics: phase3.vocal_lyrics || '',\n    phase3_suno_prompt: phase3.suno_prompt || '',\n    phase3_duration: Math.ceil(original.estimated_duration_sec * 0.4),\n    \n    // 통합\n    visual_prompt: phase1.runway_prompt || '',\n    vocal_prompt: phase3.vocal_lyrics || '',\n    music_prompt: phase3.suno_prompt || '',\n    fish_emotion_tags: fishEmotionString,\n    emotion_values: JSON.stringify(emotionValues)\n  }\n}];"
+        "jsCode": "// Claude 스토리 응답 파싱\n// 원본 스토리 데이터는 이전 노드에서 가져오기\nlet original;\ntry {\n  const ref = $('Claude 요청 본문 준비');\n  original = ref && ref.first ? ref.first().json : null;\n} catch (e) { original = null; }\nif (!original) original = $input.first().json;\nconst claudeResponse = $input.first().json;\n\nlet narrative = {};\nlet phase1 = {};\nlet phase2 = [];\nlet phase3 = {};\nlet emotionValues = { fear: 0.0, resolve: 0.5, confusion: 0.0 };\n\ntry {\n  const content = claudeResponse.content || [];\n  const text = content.find(c => c.type === 'text')?.text || '';\n  \n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    narrative = parsed.narrative_structure || {};\n    phase1 = parsed.phase1_background || {};\n    phase2 = parsed.phase2_characters || [];\n    phase3 = parsed.phase3_aria || {};\n    emotionValues = parsed.emotion_values || emotionValues;\n  }\n} catch (e) {\n  console.error('JSON 파싱 실패:', e);\n  // 폴백\n  phase1 = {\n    runway_prompt: `Wide cinematic shot of ${original.title}, biblical scene`\n  };\n  phase2 = [{\n    character: original.main_characters?.[0] || 'biblical character',\n    hedra_prompt: `Biblical scene with ${original.main_characters?.[0] || 'character'}`\n  }];\n  phase3 = {\n    vocal_lyrics: `${original.title}\\n${original.key_theme}`,\n    suno_prompt: 'Cinematic orchestral epic dramatic'\n  };\n}\n\n// Fish Audio 감정 태그\nlet fishTags = [];\nif (emotionValues.fear > 0.7) fishTags.push('scared', 'nervous');\nelse if (emotionValues.fear > 0.4) fishTags.push('worried');\nif (emotionValues.confusion > 0.6) fishTags.push('confused');\nif (emotionValues.resolve > 0.8) fishTags.push('confident', 'determined');\nif (fishTags.length === 0) fishTags.push('calm');\n\nconst phase3Tags = phase3.vocal_emotion_tags || '';\nif (phase3Tags) fishTags.push(phase3Tags);\nconst fishEmotionString = `(${fishTags.join(')(')})` ;\n\n// 주요 캐릭터 선택 (첫 번째)\nconst mainChar = phase2[0] || {};\n\nreturn [{\n  json: {\n    story_id: original.id ?? original.story_id,\n    book_name: original.book_name,\n    verses_range: original.verses_range,\n    title: original.title,\n    verse_count: original.verse_count,\n    estimated_duration_sec: original.estimated_duration_sec,\n    \n    // 서사 구조\n    narrative_structure: JSON.stringify(narrative),\n    \n    // Phase 1\n    phase1_location: phase1.location || '',\n    phase1_runway_prompt: phase1.runway_prompt || '',\n    phase1_duration: Math.ceil(original.estimated_duration_sec * 0.25),\n    \n    // Phase 2\n    phase2_character_description: mainChar.description || '',\n    phase2_hedra_prompt: mainChar.hedra_prompt || '',\n    phase2_duration: Math.ceil(original.estimated_duration_sec * 0.35),\n    \n    // Phase 3\n    phase3_vocal_lyrics: phase3.vocal_lyrics || '',\n    phase3_suno_prompt: phase3.suno_prompt || '',\n    phase3_duration: Math.ceil(original.estimated_duration_sec * 0.4),\n    \n    // 통합\n    visual_prompt: phase1.runway_prompt || '',\n    vocal_prompt: phase3.vocal_lyrics || '',\n    music_prompt: phase3.suno_prompt || '',\n    fish_emotion_tags: fishEmotionString,\n    emotion_values: JSON.stringify(emotionValues)\n  }\n}];"
       },
       "id": "parse-story-response",
       "name": "스토리 프롬프트 파싱",
@@ -105,7 +105,20 @@
     },
     {
       "parameters": {
-        "jsCode": "// PostgreSQL UPDATE 쿼리 직접 생성 (n8n 파라미터 배열 버그 우회)\nconst data = $input.first().json;\n\n// SQL 이스케이프 함수\nfunction escapeSqlString(str) {\n  if (str === null || str === undefined) return 'NULL';\n  return \"'\" + String(str).replace(/'/g, \"''\").replace(/\\\\/g, \"\\\\\\\\\") + \"'\";\n}\n\n// 각 필드 값 준비\nconst narrative_structure = escapeSqlString(data.narrative_structure || null);\nconst phase1_location = escapeSqlString(data.phase1_location || null);\nconst phase1_runway_prompt = escapeSqlString(data.phase1_runway_prompt || null);\nconst phase2_character_description = escapeSqlString(data.phase2_character_description || null);\nconst phase2_hedra_prompt = escapeSqlString(data.phase2_hedra_prompt || null);\nconst phase3_vocal_lyrics = escapeSqlString(data.phase3_vocal_lyrics || null);\nconst phase3_suno_prompt = escapeSqlString(data.phase3_suno_prompt || null);\nconst visual_prompt = escapeSqlString(data.visual_prompt || null);\nconst vocal_prompt = escapeSqlString(data.vocal_prompt || null);\nconst music_prompt = escapeSqlString(data.music_prompt || null);\nconst fish_emotion_tags = escapeSqlString(data.fish_emotion_tags || null);\nconst emotion_values = escapeSqlString(data.emotion_values || null);\nconst story_id = data.story_id;\n\n// SQL 쿼리 생성\nconst sqlQuery = `UPDATE story_units SET \n  narrative_structure = ${narrative_structure},\n  phase1_location = ${phase1_location},\n  phase1_runway_prompt = ${phase1_runway_prompt},\n  phase2_character_description = ${phase2_character_description},\n  phase2_hedra_prompt = ${phase2_hedra_prompt},\n  phase3_vocal_lyrics = ${phase3_vocal_lyrics},\n  phase3_suno_prompt = ${phase3_suno_prompt},\n  visual_prompt = ${visual_prompt},\n  vocal_prompt = ${vocal_prompt},\n  music_prompt = ${music_prompt},\n  fish_emotion_tags = ${fish_emotion_tags},\n  emotion_values = ${emotion_values}\nWHERE id = ${story_id}`;\n\nreturn [{\n  json: {\n    ...data,\n    sql_query: sqlQuery\n  }\n}];"
+        "jsCode": "// [디버그] 스토리 저장 직전: story_id 및 필수 필드 확인\nconst data = $input.first().json;\nconst storyId = data.story_id;\nconst hasNarrative = Boolean(data.narrative_structure && data.narrative_structure.length > 0);\nconst phase1Len = (data.phase1_runway_prompt || '').length;\nconsole.log('[디버그] story_id:', storyId, 'type:', typeof storyId);\nconsole.log('[디버그] narrative_structure 존재:', hasNarrative, 'phase1_runway_prompt 길이:', phase1Len);\nconsole.log('[디버그] title:', data.title);\nif (storyId === undefined || storyId === null) {\n  console.error('[디버그] 오류: story_id가 없습니다. data 키:', Object.keys(data));\n}\nreturn [{ json: data }];"
+      },
+      "id": "debug-before-save",
+      "name": "디버그: 스토리 저장 전",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// PostgreSQL UPDATE 쿼리 직접 생성 (n8n 파라미터 배열 버그 우회)\nconst data = $input.first().json;\n\n// SQL 이스케이프 함수\nfunction escapeSqlString(str) {\n  if (str === null || str === undefined) return 'NULL';\n  return \"'\" + String(str).replace(/'/g, \"''\").replace(/\\\\/g, \"\\\\\\\\\") + \"'\";\n}\n\n// story_id: 정수로 보장 (SERIAL이므로)\nconst rawId = data.story_id;\nconst story_id = rawId !== undefined && rawId !== null ? parseInt(String(rawId), 10) : NaN;\nif (Number.isNaN(story_id) || story_id < 1) {\n  throw new Error('스토리 저장 실패: story_id가 없거나 유효하지 않습니다. value=' + JSON.stringify(rawId));\n}\n\n// 각 필드 값 준비\nconst narrative_structure = escapeSqlString(data.narrative_structure || null);\nconst phase1_location = escapeSqlString(data.phase1_location || null);\nconst phase1_runway_prompt = escapeSqlString(data.phase1_runway_prompt || null);\nconst phase2_character_description = escapeSqlString(data.phase2_character_description || null);\nconst phase2_hedra_prompt = escapeSqlString(data.phase2_hedra_prompt || null);\nconst phase3_vocal_lyrics = escapeSqlString(data.phase3_vocal_lyrics || null);\nconst phase3_suno_prompt = escapeSqlString(data.phase3_suno_prompt || null);\nconst visual_prompt = escapeSqlString(data.visual_prompt || null);\nconst vocal_prompt = escapeSqlString(data.vocal_prompt || null);\nconst music_prompt = escapeSqlString(data.music_prompt || null);\nconst fish_emotion_tags = escapeSqlString(data.fish_emotion_tags || null);\nconst emotion_values = escapeSqlString(data.emotion_values || null);\n\n// SQL 쿼리 생성 (JSONB 컬럼은 ::jsonb 캐스팅, id는 정수)\nconst sqlQuery = `UPDATE story_units SET \n  narrative_structure = (${narrative_structure})::jsonb,\n  phase1_location = ${phase1_location},\n  phase1_runway_prompt = ${phase1_runway_prompt},\n  phase2_character_description = ${phase2_character_description},\n  phase2_hedra_prompt = ${phase2_hedra_prompt},\n  phase3_vocal_lyrics = ${phase3_vocal_lyrics},\n  phase3_suno_prompt = ${phase3_suno_prompt},\n  visual_prompt = ${visual_prompt},\n  vocal_prompt = ${vocal_prompt},\n  music_prompt = ${music_prompt},\n  fish_emotion_tags = ${fish_emotion_tags},\n  emotion_values = ${emotion_values}\nWHERE id = ${story_id}`;\n\nreturn [{\n  json: {\n    ...data,\n    sql_query: sqlQuery\n  }\n}];"
       },
       "id": "prepare-postgres-query",
       "name": "PostgreSQL 쿼리 생성",
@@ -128,6 +141,19 @@
       "typeVersion": 1,
       "position": [
         1450,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 쿼리 생성 결과 그대로 전달 (저장 + 병렬 분기 두 갈래로)\n// Postgres UPDATE는 항목을 넘기지 않으므로, 저장 뒤가 아닌 쿼리 생성 직후에서 분기\nreturn $input.all().map(item => ({ json: item.json }));"
+      },
+      "id": "restore-story-data",
+      "name": "스토리 데이터 복원",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1550,
         500
       ]
     },
@@ -159,7 +185,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1650,
+        1750,
         500
       ]
     },
@@ -499,7 +525,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// 모든 API 결과 통합 (스토리 단위)\nconst original = $('스토리 프롬프트 파싱').first().json;\nconst sunoData = $('Suno URL 추출').first().json;\nconst fishData = $('Fish Audio: 음성 생성').first().json;\nconst hedraData = $('Hedra: 립싱크 영상 생성').first().json;\nconst runwayData = $('Runway: 배경 영상 생성').first().json;\n\nconst episodeId = `story_${original.story_id}_${Date.now()}`;\nconst mainChar = original.main_characters && Array.isArray(original.main_characters) ? original.main_characters[0] : 'biblical_character';\n\nreturn [{\n  json: {\n    episode_id: episodeId,\n    story_id: original.story_id,\n    book_name: original.book_name,\n    verses_range: original.verses_range,\n    title: original.title,\n    story_text: original.title + '\\n' + (original.key_theme || ''),\n    book_info: `${original.book_name} ${original.verses_range}`,\n    character: mainChar,\n    suno_url: sunoData?.suno_url || '',\n    fish_url: fishData?.audio_url || fishData?.url || '',\n    hedra_url: hedraData?.videoUrl || hedraData?.url || '',\n    runway_url: runwayData?.url || '',\n    output_dir: './output'\n  }\n}];"
+        "jsCode": "// 모든 API 결과 통합 (스토리 단위) - 노드 참조 안전 처리\nlet original, sunoData, fishData, hedraData, runwayData;\ntry { const r = $('스토리 프롬프트 파싱'); original = r && r.first ? r.first().json : null; } catch (e) { original = null; }\ntry { const r = $('Claude 요청 본문 준비'); if (!original && r && r.first) original = r.first().json; } catch (e) {}\nif (!original) original = $input.first().json;\ntry { const r = $('Suno URL 추출'); sunoData = r && r.first ? r.first().json : {}; } catch (e) { sunoData = {}; }\ntry { const r = $('Fish Audio: 음성 생성'); fishData = r && r.first ? r.first().json : {}; } catch (e) { fishData = {}; }\ntry { const r = $('Hedra: 립싱크 영상 생성'); hedraData = r && r.first ? r.first().json : {}; } catch (e) { hedraData = {}; }\ntry { const r = $('Runway: 배경 영상 생성'); runwayData = r && r.first ? r.first().json : {}; } catch (e) { runwayData = {}; }\n\nconst episodeId = 'story_' + (original.story_id || 'unknown') + '_' + Date.now();\nconst mainChar = original.main_characters && Array.isArray(original.main_characters) ? original.main_characters[0] : 'biblical_character';\n\nreturn [{\n  json: {\n    episode_id: episodeId,\n    story_id: original.story_id,\n    book_name: original.book_name || '',\n    verses_range: original.verses_range || '',\n    title: original.title || '',\n    story_text: (original.title || '') + '\\n' + (original.key_theme || ''),\n    book_info: ((original.book_name || '') + ' ' + (original.verses_range || '')).trim(),\n    character: mainChar,\n    suno_url: sunoData.suno_url || '',\n    fish_url: fishData.audio_url || fishData.url || '',\n    hedra_url: hedraData.videoUrl || hedraData.url || '',\n    runway_url: runwayData.url || '',\n    output_dir: './output'\n  }\n}];"
       },
       "id": "combine-all-api-results",
       "name": "최종 데이터 통합",
@@ -538,7 +564,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// YouTube 업로드 준비\nconst data = $input.first().json;\nconst original = $('스토리 프롬프트 파싱').first().json;\n\nconst title = `${data.book_name} ${data.verses_range}`;\nconst description = `성경을 영화처럼 경험하세요.\\n\\n${original.title}\\n\\n${original.key_theme || ''}\\n\\n#성경 #뮤지컬 #AI #영화`;\nconst videoPath = `${data.output_dir}/${data.episode_id}_final.mp4`;\nconst thumbnailPath = `${data.output_dir}/${data.episode_id}_thumbnail.jpg`;\n\nreturn [{\n  json: {\n    ...data,\n    youtube_title: title,\n    youtube_description: description,\n    youtube_video_path: videoPath,\n    youtube_thumbnail_path: thumbnailPath\n  }\n}];"
+        "jsCode": "// YouTube 업로드 준비 - 노드 참조 안전 처리\nconst data = $input.first().json;\nlet original;\ntry {\n  const ref = $('스토리 프롬프트 파싱');\n  original = ref && ref.first ? ref.first().json : null;\n} catch (e) { original = null; }\nif (!original) original = data;\n\nconst title = `${data.book_name || ''} ${data.verses_range || ''}`.trim();\nconst description = `성경을 영화처럼 경험하세요.\\n\\n${original.title || ''}\\n\\n${original.key_theme || ''}\\n\\n#성경 #뮤지컬 #AI #영화`;\nconst videoPath = `${data.output_dir || './output'}/${data.episode_id}_final.mp4`;\nconst thumbnailPath = `${data.output_dir || './output'}/${data.episode_id}_thumbnail.jpg`;\n\nreturn [{\n  json: {\n    ...data,\n    youtube_title: title,\n    youtube_description: description,\n    youtube_video_path: videoPath,\n    youtube_thumbnail_path: thumbnailPath\n  }\n}];"
       },
       "id": "prepare-youtube-upload",
       "name": "YouTube 업로드 준비",
@@ -653,6 +679,17 @@
       "main": [
         [
           {
+            "node": "디버그: 스토리 저장 전",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "디버그: 스토리 저장 전": {
+      "main": [
+        [
+          {
             "node": "PostgreSQL 쿼리 생성",
             "type": "main",
             "index": 0
@@ -664,16 +701,21 @@
       "main": [
         [
           {
-            "node": "PostgreSQL: 스토리 프롬프트 저장",
+            "node": "스토리 데이터 복원",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "PostgreSQL: 스토리 프롬프트 저장": {
+    "스토리 데이터 복원": {
       "main": [
         [
+          {
+            "node": "PostgreSQL: 스토리 프롬프트 저장",
+            "type": "main",
+            "index": 0
+          },
           {
             "node": "병렬 분기 (4개 API)",
             "type": "main",
