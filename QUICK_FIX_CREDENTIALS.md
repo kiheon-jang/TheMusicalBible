@@ -26,7 +26,7 @@
 2. `+ Create New` 클릭
 3. API Key 입력:
    ```
-   (API_KEYS.txt 또는 환경변수 사용)
+   (API_KEYS.txt의 Claude API 키 붙여넣기)
    ```
 4. `Save` 클릭
 

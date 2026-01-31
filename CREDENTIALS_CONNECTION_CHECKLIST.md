@@ -59,7 +59,7 @@ Password: cSdtWArmQfsLDSnpuKLoIgxHaRyGREXq
 **Credential 정보 (Header Auth):**
 ```
 Name: x-api-key
-Value: (API_KEYS.txt 또는 환경변수 사용)
+Value: (API_KEYS.txt 또는 환경변수 CLAUDE_API_KEY 사용)
 ```
 
 ---

@@ -123,7 +123,7 @@ Step 5: 첫 영상 테스트
 
 ```bash
 export DATABASE_URL="postgresql://postgres:cSdtWArmQfsLDSnpuKLoIgxHaRyGREXq@maglev.proxy.rlwy.net:15087/railway"
-export CLAUDE_API_KEY="(API_KEYS.txt 또는 환경변수 사용)"
+export CLAUDE_API_KEY="(API_KEYS.txt 참고)"
 
 # 현재 792개로 분석
 python3 scripts/analyze_story_units.py --test
@@ -215,7 +215,7 @@ cd /Users/giheonjang/Documents/project/TMB
 
 export DATABASE_URL="postgresql://postgres:cSdtWArmQfsLDSnpuKLoIgxHaRyGREXq@maglev.proxy.rlwy.net:15087/railway"
 
-export CLAUDE_API_KEY="(API_KEYS.txt 또는 환경변수 사용)"
+export CLAUDE_API_KEY="(API_KEYS.txt 참고)"
 
 # 스토리 분석 시작
 python3 scripts/analyze_story_units.py --test
