@@ -159,38 +159,6 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "always-true",
-              "leftValue": "={{ $json.story_id }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "larger"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "split-parallel",
-      "name": "병렬 분기 (4개 API)",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1750,
-        500
-      ]
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "https://suno-api-production-ac35.up.railway.app/api/generate",
         "sendBody": true,
@@ -198,23 +166,23 @@
           "parameters": [
             {
               "name": "prompt",
-              "value": "={{ $json.phase3_suno_prompt }}"
-            },
-            {
-              "name": "custom_mode",
-              "value": "true"
-            },
-            {
-              "name": "lyrics",
               "value": "={{ $json.phase3_vocal_lyrics }}"
             },
             {
-              "name": "make_instrumental",
-              "value": "false"
+              "name": "mv",
+              "value": "chirp-v3-0"
             },
             {
-              "name": "wait_audio",
-              "value": "false"
+              "name": "title",
+              "value": "={{ $json.title || 'TMB' }}"
+            },
+            {
+              "name": "tags",
+              "value": "={{ $json.phase3_suno_prompt }}"
+            },
+            {
+              "name": "negative_tags",
+              "value": ""
             }
           ]
         },
@@ -716,17 +684,6 @@
             "type": "main",
             "index": 0
           },
-          {
-            "node": "병렬 분기 (4개 API)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "병렬 분기 (4개 API)": {
-      "main": [
-        [
           {
             "node": "Suno: 음악 생성 시작",
             "type": "main",
