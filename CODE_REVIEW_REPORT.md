@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # 🔍 The Musical Bible - 코드 종합 점검 리포트
 **점검일**: 2026년 1월 25일  
 **점검자**: AI Code Reviewer  
@@ -601,7 +606,7 @@ CREATE INDEX idx_status_batch ON scripture(status, batch_status);
 ---
 
 **다음 파일을 참고하여 수정하세요**:
-- `CODE_FIXES_PRIORITY.md` (우선순위별 수정 가이드)
-- `API_ENDPOINTS_VERIFICATION.md` (API 엔드포인트 검증 체크리스트)
+- `[[CODE_FIXES_PRIORITY]].md` (우선순위별 수정 가이드)
+- `[[API_ENDPOINTS_VERIFICATION]].md` (API 엔드포인트 검증 체크리스트)
 
 🎉 **훌륭한 작업입니다! 거의 완성되었습니다!**

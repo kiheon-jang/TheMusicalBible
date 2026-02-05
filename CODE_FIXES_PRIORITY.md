@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # 🔧 코드 수정 가이드 (우선순위별)
 
 **목표**: 1-2주 내 완전 가동 가능 상태 달성

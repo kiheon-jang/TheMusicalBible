@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # 🔧 Credential 연결 문제 해결 (최종)
 
 ## 📊 문제 원인

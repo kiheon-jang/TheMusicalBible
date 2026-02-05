@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # ✅ 원래 구조로 복원 완료!
 
 ## 🔄 복원 작업 내용
@@ -38,14 +43,14 @@
 ✅ 유지: Phase 1, 2, 3 시스템
 ```
 
-#### `IMPLEMENTATION_SUMMARY.md`
+#### `[[IMPLEMENTATION_SUMMARY]].md`
 ```
 ✅ 캐릭터 이미지 준비 가이드 섹션 제거
 ✅ Hedra Identity Anchor 시스템으로 대체
 ✅ Step 4 이미지 준비 단계 제거
 ```
 
-#### `MASTER_PLAN_REALISTIC.md`
+#### `[[MASTER_PLAN_REALISTIC]].md`
 ```
 ✅ "수동 이미지 관리" → "Hedra 자동 생성"으로 변경
 ```

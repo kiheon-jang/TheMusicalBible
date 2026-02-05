@@ -1,3 +1,8 @@
+---
+date: 2026-02-01
+project: 10_Projects/project
+tags: ['project']
+---
 # ⚡ 5분 빠른 시작 가이드
 
 > 지금 당장 첫 번째 음악을 생성하는 방법!

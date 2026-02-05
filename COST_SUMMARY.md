@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # 💰 The Musical Bible - 비용 요약
 
 **생성일: 2026-01-25**

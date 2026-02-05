@@ -1,3 +1,8 @@
+---
+date: 2026-02-01
+project: 10_Projects/project
+tags: ['project']
+---
 # YouTube OAuth2 설정 가이드
 
 ## 🎯 목표

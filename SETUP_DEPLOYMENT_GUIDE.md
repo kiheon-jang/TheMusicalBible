@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # 🚀 The Musical Bible - 설정 및 배포 통합 가이드
 
 **최종 업데이트**: 2026년 1월 25일
@@ -383,11 +388,11 @@ CODE_FIXES_PRIORITY.md 참고
 
 ## 📚 관련 문서
 
-- **코드 리뷰**: `CODE_REVIEW_REPORT.md`
-- **수정 가이드**: `CODE_FIXES_PRIORITY.md`
-- **API 검증**: `API_ENDPOINTS_VERIFICATION.md`
-- **프로젝트 개요**: `README.md`
-- **빠른 시작**: `QUICK_START.md`
+- **코드 리뷰**: `[[CODE_REVIEW_REPORT]].md`
+- **수정 가이드**: `[[CODE_FIXES_PRIORITY]].md`
+- **API 검증**: `[[API_ENDPOINTS_VERIFICATION]].md`
+- **프로젝트 개요**: `[[README]].md`
+- **빠른 시작**: `[[QUICK_START]].md`
 
 ---
 

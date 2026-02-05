@@ -1,3 +1,8 @@
+---
+date: 2026-01-31
+project: 10_Projects/project
+tags: ['project']
+---
 # 🎯 The Musical Bible - 현실적 시작 계획
 
 ## ✅ 사용자 지적사항 (100% 맞음!)

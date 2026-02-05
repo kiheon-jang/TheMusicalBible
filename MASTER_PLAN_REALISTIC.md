@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # 📑 [REALISTIC MASTER PLAN] AI 시네마틱 뮤지컬 성경 유니버스
 
 **Project Title**: The Musical Bible (TMB) - Cinematic Collection 2026  

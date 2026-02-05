@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['credentials', 'project']
+---
 # 🔑 n8n Credentials 연결 가이드 (5분)
 
 ## 📍 n8n 접속

@@ -1,3 +1,8 @@
+---
+date: 2026-02-01
+project: 10_Projects/project
+tags: ['index', 'project']
+---
 # 🎬 The Musical Bible - Cinematic Collection 2026
 
 > AI 시네마틱 뮤지컬 성경 - 완전 자동화 YouTube 쇼츠 생성 시스템

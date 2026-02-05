@@ -160,32 +160,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://suno-api-production-ac35.up.railway.app/api/generate",
+        "url": "https://suno-api-production-ac35.up.railway.app/generate",
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "prompt",
-              "value": "={{ $json.phase3_vocal_lyrics }}"
-            },
-            {
-              "name": "mv",
-              "value": "chirp-v3-0"
-            },
-            {
-              "name": "title",
-              "value": "={{ $json.title || 'TMB' }}"
-            },
-            {
-              "name": "tags",
-              "value": "={{ $json.phase3_suno_prompt }}"
-            },
-            {
-              "name": "negative_tags",
-              "value": ""
-            }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prompt: $json.phase3_vocal_lyrics || '', mv: 'chirp-v3-5', title: $json.title || 'TMB', tags: $json.phase3_suno_prompt || 'cinematic orchestral', negative_tags: '' }) }}",
         "options": {
           "response": {
             "response": {
@@ -201,11 +179,14 @@
       "position": [
         1850,
         300
-      ]
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 15000
     },
     {
       "parameters": {
-        "jsCode": "// Suno Task ID 추출\nconst response = $input.first().json;\nconst taskId = response[0]?.id || '';\n\nreturn [{\n  json: {\n    ...response,\n    suno_task_id: taskId,\n    poll_count: 0\n  }\n}];"
+        "jsCode": "// Suno Task ID 추출 (SunoAI-API 형식)\nconst response = $input.first().json;\n// SunoAI-API는 배열 또는 객체로 응답\nconst clips = Array.isArray(response) ? response : (response.clips || [response]);\nconst taskId = clips[0]?.id || '';\n\nreturn [{\n  json: {\n    clips: clips,\n    suno_task_id: taskId,\n    poll_count: 0\n  }\n}];"
       },
       "id": "extract-suno-task",
       "name": "Suno Task ID 추출",
@@ -232,7 +213,7 @@
     },
     {
       "parameters": {
-        "url": "https://suno-api-production-ac35.up.railway.app/api/get/={{ $json.suno_task_id }}",
+        "url": "https://suno-api-production-ac35.up.railway.app/feed/{{ $json.suno_task_id }}",
         "options": {
           "response": {
             "response": {
@@ -260,8 +241,8 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json[0]?.status }}",
-              "rightValue": "complete",
+              "leftValue": "={{ $json.status || $json[0]?.status }}",
+              "rightValue": "streaming",
               "operator": {
                 "type": "string",
                 "operation": "equals"
@@ -282,7 +263,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Suno 음악 URL 추출\nconst response = $input.first().json;\nconst audioUrl = response[0]?.audio_url || '';\n\nreturn [{\n  json: {\n    suno_url: audioUrl,\n    suno_complete: true\n  }\n}];"
+        "jsCode": "// Suno 음악 URL 추출 (SunoAI-API 형식)\nconst response = $input.first().json;\n// /feed/{id} 응답: 단일 객체 또는 배열\nconst clip = Array.isArray(response) ? response[0] : response;\nconst audioUrl = clip?.audio_url || '';\n\nreturn [{\n  json: {\n    suno_url: audioUrl,\n    suno_complete: true\n  }\n}];"
       },
       "id": "extract-suno-url",
       "name": "Suno URL 추출",

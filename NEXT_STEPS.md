@@ -1,3 +1,8 @@
+---
+date: 2026-02-01
+project: 10_Projects/project
+tags: ['project']
+---
 # 🎯 The Musical Bible - 다음 단계 (하루 1개 업로드)
 
 **결정:** 하루 1개 업로드 (월 ₩155,553)
@@ -39,7 +44,7 @@ https://railway.app
 5. Save & Activate
 ```
 
-**상세 가이드:** `N8N_IMPORT_GUIDE.md`
+**상세 가이드:** `[[N8N_IMPORT_GUIDE]].md`
 
 ---
 

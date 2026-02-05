@@ -1,3 +1,8 @@
+---
+date: 2026-02-01
+project: 10_Projects/project
+tags: ['project']
+---
 # 스토리 프롬프트 저장 시 "데이터가 아예 없다" 해결
 
 ## 0. "스토리 3개 조회"에서 "1 item, No fields" 나올 때

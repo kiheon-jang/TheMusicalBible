@@ -1,62 +1,148 @@
-# Railway Suno API 점검 (500 해결)
+---
+date: 2026-02-01
+project: 10_Projects/project
+tags: ['project']
+---
+# Railway Suno API 설정 가이드 (SunoAI-API)
 
-자체 Suno API는 **Suno 공식 API가 없어** 쿠키/세션으로 Suno 웹과 동일하게 동작하도록 만든 서비스입니다.  
-`https://suno-api-production-ac35.up.railway.app/api/generate` 가 500을 반환할 때 아래를 순서대로 확인하세요.
+**변경됨**: gcui-art/suno-api → **[SunoAI-API/Suno-API](https://github.com/SunoAI-API/Suno-API)**
 
-## 1. 토큰 유무 확인
+2Captcha 유료 서비스가 필요 없는 직접 API 호출 방식으로 변경되었습니다.
 
-브라우저 또는 curl로 **헬스 체크**를 호출하세요.
+## 1. 새 API의 장점
 
-```bash
-curl -s https://suno-api-production-ac35.up.railway.app/health
+| 항목 | gcui-art (이전) | SunoAI-API (현재) |
+|------|-----------------|-------------------|
+| 2Captcha | ✅ 필수 (유료) | ❌ 불필요 |
+| 방식 | Playwright 브라우저 자동화 | 직접 API 호출 |
+| 환경 변수 | SUNO_COOKIE, TWOCAPTCHA_KEY, BROWSER 등 | SESSION_ID, COOKIE만 |
+
+## 2. Railway 배포 방법
+
+### Step 1: 기존 서비스 삭제
+1. Railway 대시보드 접속
+2. 기존 suno-api 서비스 삭제 또는 중지
+
+### Step 2: 새 서비스 생성
+1. Railway 대시보드 → **New Project** → **Deploy from GitHub repo**
+2. Repository URL: `https://github.com/SunoAI-API/Suno-API`
+3. Deploy 클릭
+
+### Step 3: 환경 변수 설정
+Railway Variables에 다음 두 가지만 설정:
+
+| 변수 | 설명 | 값 얻는 방법 |
+|------|------|-------------|
+| `SESSION_ID` | Suno 세션 ID | 아래 "쿠키 추출 방법" 참고 |
+| `COOKIE` | Suno 쿠키 전체 | 아래 "쿠키 추출 방법" 참고 |
+
+### Step 4: 배포 URL 확인
+배포 완료 후 Railway에서 생성된 URL 확인 (예: `https://suno-api-xxx.up.railway.app`)
+
+## 3. 쿠키 추출 방법
+
+1. [suno.com/create](https://suno.com/create) 접속 및 로그인
+2. 브라우저 개발자 도구 열기 (`F12`)
+3. **Network** 탭 선택
+4. 페이지 새로고침
+5. `?__clerk_api_version` 포함된 요청 찾기
+6. 해당 요청 클릭 → **Headers** 탭
+
+### SESSION_ID 찾기
+- URL에서 `sessions/` 뒤의 값
+- 예: `https://clerk.suno.com/v1/client/sessions/sess_xxxxx/tokens`
+- → `SESSION_ID` = `sess_xxxxx`
+
+### COOKIE 찾기
+- Headers → **Cookie** 값 전체 복사
+
+## 4. API 엔드포인트
+
+| 기능 | 엔드포인트 | 메서드 |
+|------|-----------|--------|
+| 음악 생성 (Custom Mode) | `/generate` | POST |
+| 음악 생성 (Description Mode) | `/generate/description-mode` | POST |
+| 상태 확인 | `/feed/{audio_id}` | GET |
+| 크레딧 확인 | `/get_credits` | GET |
+| 가사 생성 | `/generate/lyrics/` | POST |
+
+### Custom Mode 요청 형식 (워크플로우 사용)
+
+```json
+{
+  "prompt": "가사 내용",
+  "mv": "chirp-v3-5",
+  "title": "곡 제목",
+  "tags": "cinematic orchestral epic",
+  "negative_tags": ""
+}
 ```
 
-- **`"token_available": true`** → 토큰 정상. 500이면 Suno 쪽 오류 또는 요청 형식 문제.
-- **`"token_available": false`** → Railway 환경 변수 **COOKIE**, **SESSION_ID**가 비어 있거나 만료된 상태입니다.
+### Description Mode 요청 형식
 
-## 2. Railway 환경 변수 설정
+```json
+{
+  "gpt_description_prompt": "설명 프롬프트",
+  "make_instrumental": false,
+  "mv": "chirp-v3-5"
+}
+```
 
-Railway 대시보드 → Suno API 서비스 → **Variables** 탭에서 다음을 설정합니다.
+## 5. 테스트 방법
 
-| 변수 | 설명 |
-|------|------|
-| **COOKIE** | Suno 웹(suno.com) 로그인 후 브라우저 개발자도구 → Application → Cookies 에서 복사한 쿠키 문자열 |
-| **SESSION_ID** | Clerk 세션 ID (Suno 로그인 세션과 함께 사용) |
-| **BASE_URL** | Suno API 베이스 URL (예: `https://api.suno.com` 등, 사용 중인 값 유지) |
+### 크레딧 확인
+```bash
+curl https://YOUR_RAILWAY_URL/get_credits
+```
 
-- COOKIE/SESSION_ID는 **Suno 웹에 로그인한 상태**에서 다시 복사해야 합니다.  
-- 만료되면 주기적으로 갱신해야 하며, 갱신 후 서비스 **재시작**이 필요할 수 있습니다.
+정상 응답 예:
+```json
+{
+  "credits_left": 2500,
+  "period": "month",
+  "monthly_limit": 2500,
+  "monthly_usage": 0
+}
+```
 
-## 3. API 요청 형식 (n8n 워크플로우)
+### 음악 생성 테스트
+```bash
+curl -X POST https://YOUR_RAILWAY_URL/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Test lyrics here",
+    "mv": "chirp-v3-5",
+    "title": "Test Song",
+    "tags": "pop upbeat",
+    "negative_tags": ""
+  }'
+```
 
-`/api/generate` 는 **CustomModeGenerateParam** 형식을 사용합니다.
+## 6. n8n 워크플로우 URL 변경
 
-| 필드 | 필수 | 설명 |
-|------|------|------|
-| **prompt** | O | 가사 (한국어 뮤지컬 가사) |
-| **mv** | O | 모델 버전 (예: `chirp-v3-0`) |
-| **title** | O | 곡 제목 |
-| **tags** | O | 스타일/무드 (영문 설명 또는 태그) |
-| **negative_tags** | O | 제외할 스타일 (빈 문자열 `""` 가능) |
+Railway 배포 완료 후, n8n 워크플로우의 URL을 새 Railway URL로 변경해야 합니다.
 
-n8n **Suno: 음악 생성 시작** 노드는 위 필드로 이미 매핑되어 있습니다.  
-필드명을 바꾸지 말고, 가사/제목/스타일만 원하는 값으로 넣으면 됩니다.
+현재 워크플로우에 설정된 URL:
+- `https://suno-api-production-ac35.up.railway.app/generate`
+- `https://suno-api-production-ac35.up.railway.app/feed/{id}`
 
-## 4. 500 시 에러 메시지 확인
+→ 새 Railway URL로 교체 필요
 
-수정된 API는 500/503 시 **상세 메시지**를 반환합니다.
+## 7. 문제 해결
 
-- **503** + `"Suno token not available..."`  
-  → COOKIE, SESSION_ID 미설정 또는 만료. 2번 항목대로 갱신 후 재시작.
-- **500** + `"An error occurred: ..."`  
-  → Suno 백엔드 요청 실패. BASE_URL, 쿠키/세션, Suno 서비스 상태 확인.
-- **500** + `"<예외 타입>: <메시지>"`  
-  → 서버 로그와 함께 메시지 내용으로 원인 추적.
+### "Failed to get session id" 오류
+- SESSION_ID가 잘못되었거나 만료됨
+- Suno에 다시 로그인 후 새 SESSION_ID 추출
 
-## 5. 코드 변경 요약 (suno-api-fixed)
+### "Invalid token" 오류
+- COOKIE가 만료됨
+- Suno에 다시 로그인 후 새 COOKIE 추출
 
-- **cookie.py**: COOKIE/SESSION_ID가 없어도 서버가 뜨도록 안전 처리.
-- **deps.py**: 토큰이 없으면 **503** + 한글 안내 메시지 반환.
-- **main.py**: `/generate` 예외 시 **500** + 예외 타입/메시지 반환, **GET /health** 추가.
+### 토큰 자동 갱신
+- SunoAI-API는 5초마다 자동으로 토큰을 갱신함
+- 장시간 (수일) 미사용 시 재로그인 필요할 수 있음
 
-Railway에 **suno-api-fixed** 변경 사항을 배포한 뒤, `/health` 와 `/api/generate` 를 다시 호출해 보시면 됩니다.
+## 8. 참고 링크
+
+- [SunoAI-API/Suno-API GitHub](https://github.com/SunoAI-API/Suno-API)
+- [Suno.ai](https://suno.ai)

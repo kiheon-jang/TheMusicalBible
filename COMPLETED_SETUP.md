@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # ✅ The Musical Bible - 스토리 모드 설치 완료!
 
 ## 📊 작업 완료 내역 (2026-01-25)
@@ -219,18 +224,18 @@ print(f'Total stories: {cursor.fetchone()[0]}')
 ## 📚 관련 문서
 
 ### 설치 가이드
-- `QUICK_SETUP.md` - 5분 빠른 설치
-- `SETUP_DEPLOYMENT_GUIDE.md` - 상세 가이드
+- `[[QUICK_SETUP]].md` - 5분 빠른 설치
+- `[[SETUP_DEPLOYMENT_GUIDE]].md` - 상세 가이드
 
 ### 기획 문서
-- `MASTER_PLAN_REALISTIC.md` - 현실적 마스터플랜
-- `STORY_UNIT_ANALYSIS.md` - 스토리 모드 분석
-- `MIGRATION_GUIDE_TO_STORY.md` - 전환 가이드
+- `[[MASTER_PLAN_REALISTIC]].md` - 현실적 마스터플랜
+- `[[STORY_UNIT_ANALYSIS]].md` - 스토리 모드 분석
+- `[[MIGRATION_GUIDE_TO_STORY]].md` - 전환 가이드
 
 ### 기술 문서
-- `CODE_REVIEW_REPORT.md` - 코드 리뷰
-- `CODE_FIXES_PRIORITY.md` - 수정 우선순위
-- `PHASE_2_ROADMAP.md` - 향후 개선사항
+- `[[CODE_REVIEW_REPORT]].md` - 코드 리뷰
+- `[[CODE_FIXES_PRIORITY]].md` - 수정 우선순위
+- `[[PHASE_2_ROADMAP]].md` - 향후 개선사항
 
 ---
 
@@ -299,8 +304,8 @@ After:  1년 (매일 10개 제작)
 
 ## 💡 문의사항
 
-- 스크립트 오류: `MIGRATION_GUIDE_TO_STORY.md` 참고
-- n8n 설정: `SETUP_DEPLOYMENT_GUIDE.md` 참고
-- 비용 문의: `COST_ANALYSIS.md` 참고
+- 스크립트 오류: `[[MIGRATION_GUIDE_TO_STORY]].md` 참고
+- n8n 설정: `[[SETUP_DEPLOYMENT_GUIDE]].md` 참고
+- 비용 문의: `[[COST_ANALYSIS]].md` 참고
 
 **모든 준비 완료!** 이제 영상을 만들기만 하면 됩니다! 🎉

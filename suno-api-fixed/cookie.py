@@ -43,8 +43,12 @@ if _session_id:
 if _cookie and isinstance(_cookie, str) and _cookie.strip():
     try:
         suno_auth.load_cookie(_cookie.strip())
-    except Exception:
-        pass
+        # PATCH: Use __session cookie as initial token if available
+        if "__session" in suno_auth.cookie:
+            suno_auth.set_token(suno_auth.cookie["__session"].value)
+            print(f"Loaded initial token from __session cookie: {suno_auth.token[:20]}...")
+    except Exception as e:
+        print(f"Failed to load cookie: {e}")
 
 
 def update_token(suno_cookie: SunoCookie):

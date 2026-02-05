@@ -1,3 +1,8 @@
+---
+date: 2026-01-31
+project: 10_Projects/project
+tags: ['credentials', 'project']
+---
 # 🔑 n8n Credentials 연결 체크리스트 (5분)
 
 ## ✅ 완료 상황

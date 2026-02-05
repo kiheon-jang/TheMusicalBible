@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # ⚠️ n8n 워크플로우 수동 임포트 필요
 
 ## 상황

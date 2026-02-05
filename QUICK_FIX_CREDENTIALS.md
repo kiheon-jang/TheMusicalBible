@@ -1,3 +1,8 @@
+---
+date: 2026-01-31
+project: 10_Projects/project
+tags: ['credentials', 'project']
+---
 # 🔧 빠른 Credential 연결 가이드
 
 ## 📊 현재 상태

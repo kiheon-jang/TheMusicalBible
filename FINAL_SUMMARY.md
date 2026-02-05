@@ -1,3 +1,8 @@
+---
+date: 2026-01-25
+project: 10_Projects/project
+tags: ['project']
+---
 # 🎉 The Musical Bible - 최종 완료 상태
 
 **날짜:** 2026-01-25  
@@ -70,7 +75,7 @@
    Save → Execute Workflow
 ```
 
-**상세 가이드:** `N8N_LOGIN_AND_IMPORT.md`
+**상세 가이드:** `[[N8N_LOGIN_AND_IMPORT]].md`
 
 ---
 

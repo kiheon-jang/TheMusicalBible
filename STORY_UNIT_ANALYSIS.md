@@ -1,3 +1,8 @@
+---
+date: 2026-01-26
+project: 10_Projects/project
+tags: ['project']
+---
 # 📖 스토리 단위 접근 분석 (Story-Based Approach)
 
 ## 🎯 핵심 아이디어
